@@ -12,6 +12,7 @@ COPS_INSTANCES = [
     (COPSBenchmark.marine_model, (100,), 1.97462e7),
     (COPSBenchmark.pinene_model, (100,), 1.98721e1),
     (COPSBenchmark.robot_model, (200,), 9.14138),
+    (COPSBenchmark.rocket_model, (400,), 1.01283),
     (COPSBenchmark.steering_model, (200,), 5.54577e-1),
 ]
 

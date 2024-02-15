@@ -10,6 +10,7 @@ include("gasoil.jl")
 include("marine.jl")
 include("pinene.jl")
 include("robot.jl")
+include("rocket.jl")
 include("steering.jl")
 
 end # module COPSBenchmark
