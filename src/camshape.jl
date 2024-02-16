@@ -16,7 +16,7 @@ function camshape_model(n)
     # radius of the cam at discretization points
     @variable(model, R_min <= r[1:n] <= R_max, start=(R_min+R_max)/2.0)
 
-    @objective(model, Max, ((pi*R_v)/n) * sum(r[i] for i in 1:n))
+    @objective(model, Min, -((pi*R_v)/n) * sum(r[i] for i in 1:n))
 
     # Convexity
     @constraint(
@@ -33,17 +33,17 @@ function camshape_model(n)
         end
     )
     # Curvature
-    @constraint(
-        model,
-        [i=1:n-1] ,
-        -alpha*d_theta <= (r[i+1] - r[i]) <= alpha*d_theta,
-    )
+    @constraints(model, begin
+        [i=1:n-1], (r[i+1] - r[i]) <= alpha*d_theta
+        [i=1:n-1], -alpha*d_theta <= (r[i+1] - r[i])
+    end)
     @constraints(
         model, begin
-            -alpha*d_theta <= (r[1] - R_min) <= alpha*d_theta
-            -alpha*d_theta <= (R_max - r[n]) <= alpha*d_theta
-        end
-    )
+            -alpha*d_theta <= (r[1] - R_min)
+            (r[1] - R_min) <= alpha*d_theta
+            -alpha*d_theta <= (R_max - r[n])
+            (R_max - r[n]) <= alpha*d_theta
+    end)
 
     return model
 end
