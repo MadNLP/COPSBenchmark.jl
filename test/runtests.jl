@@ -14,6 +14,9 @@ COPS_INSTANCES = [
     (COPSBenchmark.robot_model, (200,), 9.14138),
     (COPSBenchmark.rocket_model, (400,), 1.01283),
     (COPSBenchmark.steering_model, (200,), 5.54577e-1),
+    (COPSBenchmark.dirichlet_model, (20,), 1.71464e-2),
+    (COPSBenchmark.henon_model, (10,), 6.667736), # N.B: objective depends on the optimizer used.
+    (COPSBenchmark.lane_emden_model, (20,), 9.11000),
 ]
 
 @testset "Instance $instance" for (instance, params, result) in COPS_INSTANCES
