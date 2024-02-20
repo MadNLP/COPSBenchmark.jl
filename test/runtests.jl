@@ -7,6 +7,7 @@ using COPSBenchmark
 COPS_INSTANCES = [
     (COPSBenchmark.bearing_model, (50, 50), -1.5482e-1),
     (COPSBenchmark.camshape_model, (1000,), 4.2791), # TODO: result is slightly different
+    (COPSBenchmark.catmix_model, (100,), -4.80556e-2),
     (COPSBenchmark.elec_model, (50,), 1.0552e3),
     (COPSBenchmark.gasoil_model, (100,), 5.2366e-3),
     (COPSBenchmark.marine_model, (100,), 1.97462e7),
@@ -14,6 +15,7 @@ COPS_INSTANCES = [
     (COPSBenchmark.robot_model, (200,), 9.14138),
     (COPSBenchmark.rocket_model, (400,), 1.01283),
     (COPSBenchmark.steering_model, (200,), 5.54577e-1),
+    (COPSBenchmark.torsion_model, (50, 50), -4.18087e-1),
     (COPSBenchmark.dirichlet_model, (20,), 1.71464e-2),
     (COPSBenchmark.henon_model, (10,), 6.667736), # N.B: objective depends on the optimizer used.
     (COPSBenchmark.lane_emden_model, (20,), 9.11000),
