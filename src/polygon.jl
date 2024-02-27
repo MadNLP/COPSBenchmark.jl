@@ -6,7 +6,9 @@
 #   see "Benchmarking Optimization Software with COPS"
 #   Argonne National Labs Technical Report ANL/MCS-246 (2004)
 
-function polygon_model(args...; n::Int = default_nvar, kwargs...)
+# This file has been adapted from https://github.com/JuliaSmoothOptimizers/OptimizationProblems.jl
+
+function polygon_model(n::Int)
   nlp = Model()
   N = div(n, 2)
   @variable(nlp, 0 <= r[1:N] <= 1, start = 1)
@@ -20,10 +22,10 @@ function polygon_model(args...; n::Int = default_nvar, kwargs...)
   end
   for i = 1:(N - 1)
     for j = (i + 1):N
-      @NLconstraint(nlp, r[i]^2 + r[j]^2 - 2 * r[i] * r[j] * cos(θ[i] - θ[j]) - 1 <= 0)
+      @constraint(nlp, r[i]^2 + r[j]^2 - 2 * r[i] * r[j] * cos(θ[i] - θ[j]) - 1 <= 0)
     end
   end
 
-  @NLobjective(nlp, Min, -0.5 * sum(r[i] * r[i + 1] * sin(θ[i + 1] - θ[i]) for i = 1:(N - 1)))
+  @objective(nlp, Min, -0.5 * sum(r[i] * r[i + 1] * sin(θ[i + 1] - θ[i]) for i = 1:(N - 1)))
   return nlp
 end
