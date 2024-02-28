@@ -5,6 +5,7 @@ using JuMP
 
 
 include("bearing.jl")
+include("chain.jl")
 include("camshape.jl")
 include("catmix.jl")
 include("channel.jl")
@@ -14,6 +15,7 @@ include("glider.jl")
 include("marine.jl")
 include("methanol.jl")
 include("pinene.jl")
+include("polygon.jl")
 include("robot.jl")
 include("rocket.jl")
 include("steering.jl")
