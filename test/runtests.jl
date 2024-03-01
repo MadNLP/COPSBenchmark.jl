@@ -22,6 +22,9 @@ COPS_INSTANCES = [
     (COPSBenchmark.dirichlet_model, (20,), 1.71464e-2),
     (COPSBenchmark.henon_model, (10,), 6.667736), # N.B: objective depends on the optimizer used.
     (COPSBenchmark.lane_emden_model, (20,), 9.11000),
+    (COPSBenchmark.triangle_deer_model, (), 2.01174e3),
+    (COPSBenchmark.triangle_pacman_model, (), 1.25045e3),
+    (COPSBenchmark.triangle_turtle_model, (), 4.21523e3),
 ]
 
 @testset "Instance $instance" for (instance, params, result) in COPS_INSTANCES
@@ -33,4 +36,3 @@ COPS_INSTANCES = [
     # Test that the objective matches the value reported in http://www.mcs.anl.gov/~more/cops/cops3.pdf
     @test JuMP.objective_value(model) ≈ result rtol=1e-4
 end
-

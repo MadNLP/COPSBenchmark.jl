@@ -18,6 +18,7 @@ include("robot.jl")
 include("rocket.jl")
 include("steering.jl")
 include("torsion.jl")
+include("triangle.jl")
 
 include("pde_utils.jl")
 include("dirichlet.jl")
