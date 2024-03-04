@@ -14,3 +14,7 @@ Tr = [
 Tr = vec(reshape(Tr, 9, 1));
 xe = vec(reshape(xe, 8, 1));
 Constants = [1, 2, 3];
+
+include("triangle_deer.jl")
+include("triangle_pacman.jl")
+include("triangle_turtle.jl")

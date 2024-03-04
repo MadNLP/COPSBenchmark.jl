@@ -5,9 +5,11 @@
 #   see "Benchmarking Optimization Software with COPS"
 #   Argonne National Labs Technical Report ANL/MCS-246 (2004)
 
-include("../data/triangle.jl")
+# This file has been adapted from https://github.com/JuliaSmoothOptimizers/OptimizationProblems.jl
 
-function triangle_model(x0 = xe, TRIS::Vector{Int64} = Tr, Const::Vector{Int64} = Constants; kwargs...)
+include(joinpath("..", "data", "triangle.jl"))
+
+function triangle_model(x0 = xe, TRIS::Vector{Int64} = Tr, Const::Vector{Int64} = Constants)
   τ = 0.0
   n = length(x0)
   N = Int(div(n, 2))
@@ -25,7 +27,7 @@ function triangle_model(x0 = xe, TRIS::Vector{Int64} = Tr, Const::Vector{Int64} 
 
   @variable(nlp, lvar[i] <= x[i = 1:n] <= uvar[i], start = x0[i])
 
-  @NLobjective(
+  @objective(
     nlp,
     Min,
     sum(
@@ -45,7 +47,7 @@ function triangle_model(x0 = xe, TRIS::Vector{Int64} = Tr, Const::Vector{Int64} 
   )
 
   for e = 1:E
-    @NLconstraint(
+    @constraint(
       nlp,
       2 * (
         (x[TRIS[e + E]] - x[TRIS[e]]) * (x[TRIS[e + 2 * E] + N] - x[TRIS[e] + N]) -
@@ -57,11 +59,6 @@ function triangle_model(x0 = xe, TRIS::Vector{Int64} = Tr, Const::Vector{Int64} 
   return nlp
 end
 
-include("../data/triangle_deer.jl")
-triangle_deer_model(; kwargs...) = triangle_model(xe_deer, TRIS_deer, Const_deer; kwargs...)
-
-include("../data/triangle_pacman.jl")
-triangle_pacman_model(; kwargs...) = triangle_model(xe_pacman, TRIS_pacman, Const_pacman; kwargs...)
-
-include("../data/triangle_turtle.jl")
-triangle_turtle_model(; kwargs...) = triangle_model(xe_turtle, TRIS_turtle, Const_turtle; kwargs...)
+triangle_deer_model() = triangle_model(xe_deer, TRIS_deer, Const_deer)
+triangle_pacman_model() = triangle_model(xe_pacman, TRIS_pacman, Const_pacman)
+triangle_turtle_model() = triangle_model(xe_turtle, TRIS_turtle, Const_turtle)
