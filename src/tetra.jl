@@ -20,15 +20,15 @@ function tetra_model(
   N = round(Int, n / 3)
   E = round(Int, length(TETS) / 4)
 
-  lvar = -Inf * ones(n)
-  lvar[Const] = x0[Const]
-  lvar[Const .+ N] = x0[Const .+ N]
-  lvar[Const .+ 2 * N] = x0[Const .+ 2 * N]
+  lvar = fill(-Inf, n)
+  lvar[Const] .= x0[Const]
+  lvar[Const .+ N] .= x0[Const .+ N]
+  lvar[Const .+ 2 * N] .= x0[Const .+ 2 * N]
 
-  uvar = Inf * ones(n)
-  uvar[Const] = x0[Const]
-  uvar[Const .+ N] = x0[Const .+ N]
-  uvar[Const .+ 2 * N] = x0[Const .+ 2 * N]
+  uvar = fill(Inf, n)
+  uvar[Const] .= x0[Const]
+  uvar[Const .+ N] .= x0[Const .+ N]
+  uvar[Const .+ 2 * N] .= x0[Const .+ 2 * N]
 
   nlp = Model()
 
@@ -61,10 +61,10 @@ function tetra_model(
     )
   )
 
-  for e = 1:E
-    @constraint(
-      nlp,
-      sum(
+  @constraint(
+    nlp, 
+    [e in 1:E],
+    sum(
         (x[TETS[e + E] + N * i] - x[TETS[e] + N * i]) *
         (
           (x[TETS[e + 2 * E] + N * mod(i + 1, 3)] - x[TETS[e] + N * mod(i + 1, 3)]) *
@@ -73,9 +73,8 @@ function tetra_model(
           (x[TETS[e + 3 * E] + N * mod(i + 1, 3)] - x[TETS[e] + N * mod(i + 1, 3)])
         ) *
         sqrt(2) for i = 0:2
-      ) >= τ
-    )
-  end
+      ) >= τ, 
+  )
 
   return nlp
 end
@@ -84,5 +83,5 @@ tetra_duct12_model() = tetra_model(xe_duct12, TETS_duct12, Const_duct12)
 tetra_duct15_model() = tetra_model(xe_duct15, TETS_duct15, Const_duct15)
 tetra_duct20_model() = tetra_model(xe_duct20, TETS_duct20, Const_duct20)
 tetra_hook_model() = tetra_model(xe_hook, TETS_hook, Const_hook)
-tetra_foam5() = tetra_model(xe_foam5, TETS_foam5, Const_foam5)
-tetra_gear() = tetra_model(xe_gear, TETS_gear, Const_gear)
+tetra_foam5_model() = tetra_model(xe_foam5, TETS_foam5, Const_foam5)
+tetra_gear_model() = tetra_model(xe_gear, TETS_gear, Const_gear)
