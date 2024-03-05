@@ -20,6 +20,11 @@ COPS_INSTANCES = [
     (COPSBenchmark.robot_model, (200,), 9.14138),
     (COPSBenchmark.rocket_model, (400,), 1.01283),
     (COPSBenchmark.steering_model, (200,), 5.54577e-1),
+    (COPSBenchmark.tetra_duct15_model, (), 1.04951e4),
+    (COPSBenchmark.tetra_duct20_model, (), 4.82685e3),
+    (COPSBenchmark.tetra_foam5_model, (), 6.42560e3),
+    (COPSBenchmark.tetra_gear_model, (), 4.15163e3),
+    (COPSBenchmark.tetra_hook_model, (), 6.05735e3),
     (COPSBenchmark.torsion_model, (50, 50), -4.18087e-1),
     (COPSBenchmark.dirichlet_model, (20,), 1.71464e-2),
     (COPSBenchmark.henon_model, (10,), 6.667736), # N.B: objective depends on the optimizer used.

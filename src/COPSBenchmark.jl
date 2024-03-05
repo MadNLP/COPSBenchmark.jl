@@ -19,6 +19,7 @@ include("polygon.jl")
 include("robot.jl")
 include("rocket.jl")
 include("steering.jl")
+include("tetra.jl")
 include("torsion.jl")
 include("triangle.jl")
 
