@@ -15,6 +15,9 @@ COPS_INSTANCES = [
     (COPSBenchmark.glider_model, (100,), 1.25505e3),
     (COPSBenchmark.marine_model, (100,), 1.97462e7),
     (COPSBenchmark.methanol_model, (100,), 9.02229e-3),
+    (COPSBenchmark.minsurf_model, (50, 50), 2.51488),
+    (COPSBenchmark.minsurf_model, (50, 75), 2.50568),
+    (COPSBenchmark.minsurf_model, (50, 100), 2.50694),
     (COPSBenchmark.pinene_model, (100,), 1.98721e1),
     (COPSBenchmark.polygon_model, (100,), -0.674981), # N.B: objective depends on the optimizer used.
     (COPSBenchmark.robot_model, (200,), 9.14138),
@@ -41,5 +44,5 @@ COPS_INSTANCES = [
     JuMP.optimize!(model)
     @test JuMP.termination_status(model) == MOI.LOCALLY_SOLVED
     # Test that the objective matches the value reported in http://www.mcs.anl.gov/~more/cops/cops3.pdf
-    @test JuMP.objective_value(model) ≈ result rtol=1e-4
+    @test JuMP.objective_value(model) ≈ result rtol = 1e-4
 end

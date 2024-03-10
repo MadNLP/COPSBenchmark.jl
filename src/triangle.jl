@@ -10,53 +10,53 @@
 include(joinpath("..", "data", "triangle.jl"))
 
 function triangle_model(x0 = xe, TRIS::Vector{Int64} = Tr, Const::Vector{Int64} = Constants)
-  τ = 0.0
-  n = length(x0)
-  N = Int(div(n, 2))
-  E = Int(div(length(TRIS), 3))
+    τ = 0.0
+    n = length(x0)
+    N = Int(div(n, 2))
+    E = Int(div(length(TRIS), 3))
 
-  lvar = -Inf * ones(n)
-  lvar[Const] = x0[Const]
-  lvar[Const .+ N] = x0[Const .+ N]
+    lvar = -Inf * ones(n)
+    lvar[Const] = x0[Const]
+    lvar[Const .+ N] = x0[Const .+ N]
 
-  uvar = Inf * ones(n)
-  uvar[Const] = x0[Const]
-  uvar[Const .+ N] = x0[Const .+ N]
+    uvar = Inf * ones(n)
+    uvar[Const] = x0[Const]
+    uvar[Const .+ N] = x0[Const .+ N]
 
-  nlp = Model()
+    nlp = Model()
 
-  @variable(nlp, lvar[i] <= x[i = 1:n] <= uvar[i], start = x0[i])
+    @variable(nlp, lvar[i] <= x[i = 1:n] <= uvar[i], start = x0[i])
 
-  @objective(
-    nlp,
-    Min,
-    sum(
-      sum(
-        (1 * x[TRIS[e + E] + N * i] - x[TRIS[e] + N * i])^2 +
-        (2 * x[TRIS[e + 2 * E] + N * i] - x[TRIS[e + E] + N * i] - x[TRIS[e] + N * i])^2 / 3 for
-        i = 0:1
-      ) / (
-        2 * (
-          2 * (
-            (x[TRIS[e + E]] - x[TRIS[e]]) * (x[TRIS[e + 2 * E] + N] - x[TRIS[e] + N]) -
-            (x[TRIS[e + 2 * E]] - x[TRIS[e]]) * (x[TRIS[e + E] + N] - x[TRIS[e] + N])
-          ) / sqrt(3)
+    @objective(
+        nlp,
+        Min,
+        sum(
+            sum(
+                (1 * x[TRIS[e + E] + N * i] - x[TRIS[e] + N * i])^2 +
+                (2 * x[TRIS[e + 2 * E] + N * i] - x[TRIS[e + E] + N * i] - x[TRIS[e] + N * i])^2 /
+                3 for i = 0:1
+            ) / (
+                2 * (
+                    2 * (
+                        (x[TRIS[e + E]] - x[TRIS[e]]) * (x[TRIS[e + 2 * E] + N] - x[TRIS[e] + N]) -
+                        (x[TRIS[e + 2 * E]] - x[TRIS[e]]) * (x[TRIS[e + E] + N] - x[TRIS[e] + N])
+                    ) / sqrt(3)
+                )
+            ) for e = 1:E
         )
-      ) for e = 1:E
     )
-  )
 
-  for e = 1:E
-    @constraint(
-      nlp,
-      2 * (
-        (x[TRIS[e + E]] - x[TRIS[e]]) * (x[TRIS[e + 2 * E] + N] - x[TRIS[e] + N]) -
-        (x[TRIS[e + 2 * E]] - x[TRIS[e]]) * (x[TRIS[e + E] + N] - x[TRIS[e] + N])
-      ) / sqrt(3) >= τ
-    )
-  end
+    for e = 1:E
+        @constraint(
+            nlp,
+            2 * (
+                (x[TRIS[e + E]] - x[TRIS[e]]) * (x[TRIS[e + 2 * E] + N] - x[TRIS[e] + N]) -
+                (x[TRIS[e + 2 * E]] - x[TRIS[e]]) * (x[TRIS[e + E] + N] - x[TRIS[e] + N])
+            ) / sqrt(3) >= τ
+        )
+    end
 
-  return nlp
+    return nlp
 end
 
 triangle_deer_model() = triangle_model(xe_deer, TRIS_deer, Const_deer)
