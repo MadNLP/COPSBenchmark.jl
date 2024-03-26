@@ -27,7 +27,8 @@ function glider_model(nh)
 
     model = Model()
 
-    @variable(model, step >= 0.0, start=1/nh)
+    @variable(model, 0 <= t_f, start=1.0)
+    # @variable(model, step >= 0.0)
     # State variables
     @variable(model, 0.0 <= x[k=0:nh], start=x_0 + vx_0*(k/nh))
     @variable(model, y[k=0:nh], start=y_0 + (k/nh)*(y_f - y_0))
@@ -39,6 +40,7 @@ function glider_model(nh)
     @objective(model, Max, x[nh])
 
     @expressions(model, begin
+        step, t_f / nh
         r[i=0:nh], (x[i]/r_0 - 2.5)^2
         u[i=0:nh], u_c*(1 - r[i])*exp(-r[i])
         w[i=0:nh], vy[i] - u[i]
@@ -57,15 +59,22 @@ function glider_model(nh)
         vy_eqn[j=1:nh], vy[j] == vy[j-1] + 0.5 * step * (vy_dot[j] + vy_dot[j-1])
     end)
     # Boundary constraints
-    @constraints(model, begin
-        x[0] == x_0
-        y[0] == y_0
-        y[nh] == y_f
-        vx[0] == vx_0
-        vx[nh] == vx_f
-        vy[0] == vy_0
-        vy[nh] == vy_f
-    end)
+    # @constraints(model, begin
+    #     x[0] == x_0
+    #     y[0] == y_0
+    #     y[nh] == y_f
+    #     vx[0] == vx_0
+    #     vx[nh] == vx_f
+    #     vy[0] == vy_0
+    #     vy[nh] == vy_f
+    # end)
+    JuMP.fix(x[0], x_0; force=true)
+    JuMP.fix(y[0], y_0; force=true)
+    JuMP.fix(y[nh], y_f; force=true)
+    JuMP.fix(vx[0], vx_0; force=true)
+    JuMP.fix(vx[nh], vx_f; force=true)
+    JuMP.fix(vy[0], vy_0; force=true)
+    JuMP.fix(vy[nh], vy_f; force=true)
 
     return model
 end

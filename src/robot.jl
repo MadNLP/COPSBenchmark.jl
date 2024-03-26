@@ -32,22 +32,24 @@ function robot_model(nh)
     @variable(model, -max_u_phi <= u_phi[1:nh+1] <= max_u_phi, start=0.0)
     # Steps and final time
     @variable(model, step >= 0.0)
+    @variable(model, tf)
     # The moments of inertia
-    @variable(model, I_the[1:nh+1], start=((L-rho0)^3+rho0^3)*(sin(phi0))^2/3.0)
-    @variable(model, I_phi[1:nh+1], start=((L-rho0)^3+rho0^3)/3.0)
+    # @variable(model, I_the[1:nh+1], start=((L-rho0)^3+rho0^3)*(sin(phi0))^2/3.0)
+    # @variable(model, I_phi[1:nh+1], start=((L-rho0)^3+rho0^3)/3.0)
 
-    @objective(model, Min, step * nh)
+    @objective(model, Min, tf)
+    @constraint(model, tf == nh * step)
 
     # Physical equations
-    @constraint(
+    @expression(
         model,
-        [i=1:nh+1],
-        I_the[i] == ((L-rho[i])^3+rho[i]^3)*(sin(phi[i]))^2/3.0
+        I_the[i=1:nh+1],
+        ((L-rho[i])^3+rho[i]^3)*(sin(phi[i]))^2/3.0
     )
-    @constraint(
+    @expression(
         model,
-        [i=1:nh+1],
-        I_phi[i] == ((L-rho[i])^3+rho[i]^3)/3.0
+        I_phi[i=1:nh+1],
+        ((L-rho[i])^3+rho[i]^3)/3.0
     )
     # Dynamics
     @constraint(

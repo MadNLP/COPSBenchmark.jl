@@ -22,7 +22,7 @@ function rocket_model(nh)
     model = Model()
 
     @variables(model, begin
-        0.0 <= h[i=0:nh], (start=1.0)
+        1.0 <= h[i=0:nh], (start=1.0)
         0.0 <= v[i=0:nh], (start=i/nh*(1.0 - i/nh))
         m_f <= m[i=0:nh] <= m_0, (start=(m_f - m_0)*(i/nh) + m_0)
         0.0 <= T[i=0:nh] <= T_max, (start=T_max/2.0)
@@ -37,7 +37,7 @@ function rocket_model(nh)
         dm[i=0:nh], -T[i]/c
     end)
 
-    @objective(model, Max, h[nh])
+    @objective(model, Min, -h[nh])
 
     # Dynamics
     @constraints(model, begin
