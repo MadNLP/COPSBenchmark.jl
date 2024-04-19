@@ -19,68 +19,38 @@ function robot_model(nh)
 
     model = Model()
 
-    @variable(model, 0 <= rho[k=1:nh+1] <= L, start=rho0)
-    @variable(model, -pi <= the[k=1:nh+1] <= pi, start=2*pi/3*(k/nh)^2)
-    @variable(model, 0 <= phi[k=1:nh+1] <= pi, start=phi0)
-    # Derivatives
-    @variable(model, rho_dot[k=1:nh+1], start=0.0)
-    @variable(model, the_dot[k=1:nh+1], start=4*pi/3*(k/nh))
-    @variable(model, phi_dot[k=1:nh+1], start=0.0)
-    # Control
-    @variable(model, -max_u_rho <= u_rho[1:nh+1] <= max_u_rho, start=0.0)
-    @variable(model, -max_u_the <= u_the[1:nh+1] <= max_u_the, start=0.0)
-    @variable(model, -max_u_phi <= u_phi[1:nh+1] <= max_u_phi, start=0.0)
-    # Steps and final time
-    @variable(model, step >= 0.0)
-    # The moments of inertia
-    @variable(model, I_the[1:nh+1], start=((L-rho0)^3+rho0^3)*(sin(phi0))^2/3.0)
-    @variable(model, I_phi[1:nh+1], start=((L-rho0)^3+rho0^3)/3.0)
+    @variables(model, begin
+        0 <= rho[k=1:nh+1] <= L,                  (start=rho0)
+        -pi <= the[k=1:nh+1] <= pi,               (start=2*pi/3*(k/nh)^2)
+        0 <= phi[k=1:nh+1] <= pi,                 (start=phi0)
+        rho_dot[k=1:nh+1],                        (start=0.0)
+        the_dot[k=1:nh+1],                        (start=4*pi/3*(k/nh))
+        phi_dot[k=1:nh+1],                        (start=0.0)
+        -max_u_rho <= u_rho[1:nh+1] <= max_u_rho, (start=0.0)
+        -max_u_the <= u_the[1:nh+1] <= max_u_the, (start=0.0)
+        -max_u_phi <= u_phi[1:nh+1] <= max_u_phi, (start=0.0)
+        tf >= 0.0,                                (start=1.0)
+    end)
 
-    @objective(model, Min, step * nh)
+    @objective(model, Min, tf)
 
     # Physical equations
-    @constraint(
-        model,
-        [i=1:nh+1],
-        I_the[i] == ((L-rho[i])^3+rho[i]^3)*(sin(phi[i]))^2/3.0
-    )
-    @constraint(
-        model,
-        [i=1:nh+1],
-        I_phi[i] == ((L-rho[i])^3+rho[i]^3)/3.0
-    )
-    # Dynamics
-    @constraint(
-        model,
-        [j=2:nh+1],
-        rho[j] == rho[j-1] + 0.5 * step * (rho_dot[j] + rho_dot[j-1]),
-    )
-    @constraint(
-        model,
-        [j=2:nh+1],
-        phi[j] == phi[j-1] + 0.5 * step * (phi_dot[j] + phi_dot[j-1]),
-    )
-    @constraint(
-        model,
-        [j=2:nh+1],
-        the[j] == the[j-1] + 0.5 * step * (the_dot[j] + the_dot[j-1]),
-    )
+    @expressions(model, begin
+        step,            tf /nh
+        I_the[i=1:nh+1], ((L-rho[i])^3+rho[i]^3)*(sin(phi[i]))^2/3.0
+        I_phi[i=1:nh+1], ((L-rho[i])^3+rho[i]^3)/3.0
+    end)
 
-    @constraint(
-        model,
-        [j=2:nh+1],
-        rho_dot[j] == rho_dot[j-1] + 0.5 * step * (u_rho[j] + u_rho[j-1]) / L
-    )
-    @constraint(
-        model,
-        [j=2:nh+1],
-        the_dot[j] == the_dot[j-1] + 0.5 * step * (u_the[j] / I_the[j] + u_the[j-1] / I_the[j-1])
-    )
-    @constraint(
-        model,
-        [j=2:nh+1],
-        phi_dot[j] == phi_dot[j-1] + 0.5 * step * (u_phi[j] / I_phi[j] + u_phi[j-1] / I_phi[j-1])
-    )
+    # Dynamics
+    @constraints(model, begin
+        [j=2:nh+1], rho[j] == rho[j-1] + 0.5 * step * (rho_dot[j] + rho_dot[j-1])
+        [j=2:nh+1], phi[j] == phi[j-1] + 0.5 * step * (phi_dot[j] + phi_dot[j-1])
+        [j=2:nh+1], the[j] == the[j-1] + 0.5 * step * (the_dot[j] + the_dot[j-1])
+        [j=2:nh+1], rho_dot[j] == rho_dot[j-1] + 0.5 * step * (u_rho[j] + u_rho[j-1]) / L
+        [j=2:nh+1], the_dot[j] == the_dot[j-1] + 0.5 * step * (u_the[j] / I_the[j] + u_the[j-1] / I_the[j-1])
+        [j=2:nh+1], phi_dot[j] == phi_dot[j-1] + 0.5 * step * (u_phi[j] / I_phi[j] + u_phi[j-1] / I_phi[j-1])
+    end)
+
     # Boundary condition
     @constraints(
         model, begin

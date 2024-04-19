@@ -27,32 +27,33 @@ function glider_model(nh)
 
     model = Model()
 
-    @variable(model, step >= 0.0, start=1/nh)
-    # State variables
-    @variable(model, 0.0 <= x[k=0:nh], start=x_0 + vx_0*(k/nh))
-    @variable(model, y[k=0:nh], start=y_0 + (k/nh)*(y_f - y_0))
-    @variable(model, 0.0 <= vx[k=0:nh], start=vx_0)
-    @variable(model, vy[k=0:nh], start=vy_0)
-    # Control variables
-    @variable(model, cL_min <= cL[k=0:nh] <= cL_max, start=cL_max/2.0)
+    @variables(model, begin
+        0 <= t_f,                       (start=1.0)
+        0.0 <= x[k=0:nh],               (start=x_0 + vx_0*(k/nh))
+        y[k=0:nh],                      (start=y_0 + (k/nh)*(y_f - y_0))
+        0.0 <= vx[k=0:nh],              (start=vx_0)
+        vy[k=0:nh],                     (start=vy_0)
+        cL_min <= cL[k=0:nh] <= cL_max, (start=cL_max/2.0)
+    end)
 
     @objective(model, Max, x[nh])
 
     @expressions(model, begin
-        r[i=0:nh], (x[i]/r_0 - 2.5)^2
-        u[i=0:nh], u_c*(1 - r[i])*exp(-r[i])
-        w[i=0:nh], vy[i] - u[i]
-        v[i=0:nh], sqrt(vx[i]^2 + w[i]^2)
-        D[i=0:nh], 0.5*(c0+c1*cL[i]^2)*rho*S*v[i]^2
-        L[i=0:nh], 0.5*cL[i]*rho*S*v[i]^2
+        step,           t_f / nh
+        r[i=0:nh],      (x[i]/r_0 - 2.5)^2
+        u[i=0:nh],      u_c*(1 - r[i])*exp(-r[i])
+        w[i=0:nh],      vy[i] - u[i]
+        v[i=0:nh],      sqrt(vx[i]^2 + w[i]^2)
+        D[i=0:nh],      0.5*(c0+c1*cL[i]^2)*rho*S*v[i]^2
+        L[i=0:nh],      0.5*cL[i]*rho*S*v[i]^2
         vx_dot[i=0:nh], (-L[i]*(w[i]/v[i]) - D[i]*(vx[i]/v[i]))/m
         vy_dot[i=0:nh], (L[i]*(vx[i]/v[i]) - D[i]*(w[i]/v[i]))/m - g
     end)
 
     # Dynamics
     @constraints(model, begin
-        x_eqn[j=1:nh], x[j] == x[j-1] + 0.5 * step * (vx[j] + vx[j-1])
-        y_eqn[j=1:nh], y[j] == y[j-1] + 0.5 * step * (vy[j] + vy[j-1])
+        x_eqn[j=1:nh],  x[j] == x[j-1] + 0.5 * step * (vx[j] + vx[j-1])
+        y_eqn[j=1:nh],  y[j] == y[j-1] + 0.5 * step * (vy[j] + vy[j-1])
         vx_eqn[j=1:nh], vx[j] == vx[j-1] + 0.5 * step * (vx_dot[j] + vx_dot[j-1])
         vy_eqn[j=1:nh], vy[j] == vy[j-1] + 0.5 * step * (vy_dot[j] + vy_dot[j-1])
     end)
