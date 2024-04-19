@@ -22,16 +22,16 @@ function rocket_model(nh)
     model = Model()
 
     @variables(model, begin
-        0.0 <= h[i=0:nh], (start=1.0)
-        0.0 <= v[i=0:nh], (start=i/nh*(1.0 - i/nh))
-        m_f <= m[i=0:nh] <= m_0, (start=(m_f - m_0)*(i/nh) + m_0)
+        1.0 <= h[i=0:nh],          (start=1.0)
+        0.0 <= v[i=0:nh],          (start=i/nh*(1.0 - i/nh))
+        m_f <= m[i=0:nh] <= m_0,   (start=(m_f - m_0)*(i/nh) + m_0)
         0.0 <= T[i=0:nh] <= T_max, (start=T_max/2.0)
-        0.0 <= step, (start=1/nh)
+        0.0 <= step,               (start=1/nh)
     end)
 
     @expressions(model, begin
-        D[i=0:nh], D_c*v[i]^2*exp(-h_c*(h[i] - h_0))/h_0
-        g[i=0:nh], g_0 * (h_0 / h[i])^2
+        D[i=0:nh],  D_c*v[i]^2*exp(-h_c*(h[i] - h_0))/h_0
+        g[i=0:nh],  g_0 * (h_0 / h[i])^2
         dh[i=0:nh], v[i]
         dv[i=0:nh], (T[i] - D[i] - m[i]*g[i]) / m[i]
         dm[i=0:nh], -T[i]/c
