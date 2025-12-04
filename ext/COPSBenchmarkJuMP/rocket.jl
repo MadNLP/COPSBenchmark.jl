@@ -4,7 +4,7 @@
 # COPS 3.0 - November 2002
 # COPS 3.1 - March 2004
 
-function rocket_model(nh)
+function COPSBenchmark.rocket_model(nh, ::JuMPBackend)
     h_0 = 1.0
     v_0 = 0.0
     m_0 = 1.0

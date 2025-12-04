@@ -1,12 +1,20 @@
 name = "COPSBenchmark"
 uuid = "3c263af4-7bba-497b-afe4-00c59a0a48a5"
-authors = ["fpacaud <francoispacaud8@gmail.com>"]
-version = "0.1.0"
+version = "0.2.0"
+authors = ["MadSuite <https://madsuite.org/>"]
 
 [deps]
-JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
+[weakdeps]
+JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
+ExaModels = "1037b233-b668-4ce9-9b63-f9f681f55dd2"
+
+[extensions]
+COPSBenchmarkExaModels = "ExaModels"
+COPSBenchmarkJuMP = "JuMP"
+
 [compat]
+ExaModels = "0.9"
 JuMP = "^1.19"
-julia = "1.6"
+julia = "1.10"

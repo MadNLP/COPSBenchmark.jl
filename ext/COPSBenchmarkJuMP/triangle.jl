@@ -1,15 +1,15 @@
 # Minimize the time taken for a robot arm to travel between two points.
 
-#  This is problem 18 in the COPS (Version 3) collection of 
+#  This is problem 18 in the COPS (Version 3) collection of
 #   E. Dolan and J. More
 #   see "Benchmarking Optimization Software with COPS"
 #   Argonne National Labs Technical Report ANL/MCS-246 (2004)
 
 # This file has been adapted from https://github.com/JuliaSmoothOptimizers/OptimizationProblems.jl
 
-include(joinpath("..", "data", "triangle.jl"))
+include(joinpath(@__DIR__, "..", "..", "data", "triangle.jl"))
 
-function triangle_model(x0 = xe, TRIS::Vector{Int64} = Tr, Const::Vector{Int64} = Constants)
+function _triangle_model(x0, TRIS::Vector{Int64}, Const::Vector{Int64})
     τ = 0.0
     n = length(x0)
     N = Int(div(n, 2))
@@ -59,6 +59,6 @@ function triangle_model(x0 = xe, TRIS::Vector{Int64} = Tr, Const::Vector{Int64} 
     return nlp
 end
 
-triangle_deer_model() = triangle_model(xe_deer, TRIS_deer, Const_deer)
-triangle_pacman_model() = triangle_model(xe_pacman, TRIS_pacman, Const_pacman)
-triangle_turtle_model() = triangle_model(xe_turtle, TRIS_turtle, Const_turtle)
+COPSBenchmark.triangle_deer_model(::JuMPBackend) = _triangle_model(xe_deer, TRIS_deer, Const_deer)
+COPSBenchmark.triangle_pacman_model(::JuMPBackend) = _triangle_model(xe_pacman, TRIS_pacman, Const_pacman)
+COPSBenchmark.triangle_turtle_model(::JuMPBackend) = _triangle_model(xe_turtle, TRIS_turtle, Const_turtle)

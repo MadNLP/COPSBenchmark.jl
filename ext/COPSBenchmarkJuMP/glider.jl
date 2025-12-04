@@ -5,7 +5,7 @@
 # COPS 3.0 - November 2002
 # COPS 3.1 - March 2004
 
-function glider_model(nh)
+function COPSBenchmark.glider_model(nh, ::JuMPBackend)
     # Design parameters
     x_0 = 0.0
     y_0 = 1000.0
@@ -36,7 +36,8 @@ function glider_model(nh)
         cL_min <= cL[k=0:nh] <= cL_max, (start=cL_max/2.0)
     end)
 
-    @objective(model, Max, x[nh])
+    # N.B.: transform Max as Min to be consistent with ExaModels.
+    @objective(model, Min, -x[nh])
 
     @expressions(model, begin
         step,           t_f / nh

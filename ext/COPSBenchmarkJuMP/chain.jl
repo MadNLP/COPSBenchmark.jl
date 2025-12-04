@@ -3,14 +3,14 @@
 # Find the chain (of uniform density) of length L suspended between two points with minimal
 # potential energy.
 
-#   This is problem 4 in the COPS (Version 3) collection of 
+#   This is problem 4 in the COPS (Version 3) collection of
 #   E. Dolan and J. More'
 #   see "Benchmarking Optimization Software with COPS"
 #   Argonne National Labs Technical Report ANL/MCS-246 (2004)
 
 # This file has been adapted from https://github.com/JuliaSmoothOptimizers/OptimizationProblems.jl
 
-function chain_model(n::Int)
+function COPSBenchmark.chain_model(n::Int, ::JuMPBackend)
     nh = max(2, div(n - 4, 4))
 
     L = 4

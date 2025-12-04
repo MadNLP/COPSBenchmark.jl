@@ -1,14 +1,14 @@
-# Find the polygon of maximal area, among polygons with nv sides and    
+# Find the polygon of maximal area, among polygons with nv sides and
 #   diameter d <= 1
 
-#   This is problem 1 in the COPS (Version 3) collection of 
+#   This is problem 1 in the COPS (Version 3) collection of
 #   E. Dolan and J. More'
 #   see "Benchmarking Optimization Software with COPS"
 #   Argonne National Labs Technical Report ANL/MCS-246 (2004)
 
 # This file has been adapted from https://github.com/JuliaSmoothOptimizers/OptimizationProblems.jl
 
-function polygon_model(n::Int)
+function COPSBenchmark.polygon_model(n::Int, ::JuMPBackend)
     nlp = Model()
     N = div(n, 2)
     @variable(nlp, 0 <= r[1:N] <= 1, start = 1)

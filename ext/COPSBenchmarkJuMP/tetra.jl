@@ -1,19 +1,19 @@
 # Minimize the sum of the inverse weighted mean ratio of the elements in a fixed–boundary
 # tetrahedral mesh by adjusting the locations of the free vertices.
 
-#  This is problem 19 in the COPS (Version 3) collection of 
+#  This is problem 19 in the COPS (Version 3) collection of
 #   E. Dolan and J. More
 #   see "Benchmarking Optimization Software with COPS"
 #   Argonne National Labs Technical Report ANL/MCS-246 (2004)
 
 # This file has been adapted from https://github.com/JuliaSmoothOptimizers/OptimizationProblems.jl
 
-include(joinpath("..", "data", "tetra.jl"))
+include(joinpath(@__DIR__, "..", "..", "data", "tetra.jl"))
 
-function tetra_model(
-    x0 = xe_tetra,
-    TETS::Vector{Int64} = Tets_tetra,
-    Const::Vector{Int64} = Constants_tetra,
+function _tetra_model(
+    x0,
+    TETS::Vector{Int64},
+    Const::Vector{Int64},
 )
     τ = 0.0
     n = length(x0)
@@ -80,9 +80,9 @@ function tetra_model(
     return nlp
 end
 
-tetra_duct12_model() = tetra_model(xe_duct12, TETS_duct12, Const_duct12)
-tetra_duct15_model() = tetra_model(xe_duct15, TETS_duct15, Const_duct15)
-tetra_duct20_model() = tetra_model(xe_duct20, TETS_duct20, Const_duct20)
-tetra_hook_model() = tetra_model(xe_hook, TETS_hook, Const_hook)
-tetra_foam5_model() = tetra_model(xe_foam5, TETS_foam5, Const_foam5)
-tetra_gear_model() = tetra_model(xe_gear, TETS_gear, Const_gear)
+COPSBenchmark.tetra_duct12_model(::JuMPBackend) = _tetra_model(xe_duct12, TETS_duct12, Const_duct12)
+COPSBenchmark.tetra_duct15_model(::JuMPBackend) = _tetra_model(xe_duct15, TETS_duct15, Const_duct15)
+COPSBenchmark.tetra_duct20_model(::JuMPBackend) = _tetra_model(xe_duct20, TETS_duct20, Const_duct20)
+COPSBenchmark.tetra_hook_model(::JuMPBackend) = _tetra_model(xe_hook, TETS_hook, Const_hook)
+COPSBenchmark.tetra_foam5_model(::JuMPBackend) = _tetra_model(xe_foam5, TETS_foam5, Const_foam5)
+COPSBenchmark.tetra_gear_model(::JuMPBackend) = _tetra_model(xe_gear, TETS_gear, Const_gear)

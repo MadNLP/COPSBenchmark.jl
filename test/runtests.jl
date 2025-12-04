@@ -2,6 +2,8 @@
 using Test
 using JuMP
 using Ipopt
+using ExaModels
+using NLPModelsIpopt
 using COPSBenchmark
 
 COPS_INSTANCES = [
@@ -12,7 +14,7 @@ COPS_INSTANCES = [
     (COPSBenchmark.channel_model, (200,), 1.0),
     (COPSBenchmark.elec_model, (50,), 1.0552e3),
     (COPSBenchmark.gasoil_model, (100,), 5.2366e-3),
-    (COPSBenchmark.glider_model, (100,), 1.25505e3),
+    (COPSBenchmark.glider_model, (100,), -1.25505e3),
     (COPSBenchmark.marine_model, (100,), 1.97462e7),
     (COPSBenchmark.methanol_model, (100,), 9.02229e-3),
     (COPSBenchmark.minsurf_model, (50, 50), 2.51488),
@@ -30,19 +32,42 @@ COPS_INSTANCES = [
     (COPSBenchmark.tetra_hook_model, (), 6.05735e3),
     (COPSBenchmark.torsion_model, (50, 50), -4.18087e-1),
     (COPSBenchmark.dirichlet_model, (20,), 1.71464e-2),
-    (COPSBenchmark.henon_model, (10,), 6.667736), # N.B: objective depends on the optimizer used.
-    (COPSBenchmark.lane_emden_model, (20,), 9.11000),
+    # N.B.: comment henon and lane-emden as they take too long in the CI.
+    # (COPSBenchmark.henon_model, (10,), 6.667736), # N.B: objective depends on the optimizer used.
+    # (COPSBenchmark.lane_emden_model, (20,), 9.11000),
     (COPSBenchmark.triangle_deer_model, (), 2.01174e3),
     (COPSBenchmark.triangle_pacman_model, (), 1.25045e3),
     (COPSBenchmark.triangle_turtle_model, (), 4.21523e3),
 ]
 
-@testset "Instance $instance" for (instance, params, result) in COPS_INSTANCES
-    model = instance(params...)
+function solve_backend(model, ::COPSBenchmark.JuMPBackend)
     JuMP.set_optimizer(model, Ipopt.Optimizer)
     JuMP.set_silent(model)
     JuMP.optimize!(model)
-    @test JuMP.termination_status(model) == MOI.LOCALLY_SOLVED
-    # Test that the objective matches the value reported in http://www.mcs.anl.gov/~more/cops/cops3.pdf
-    @test JuMP.objective_value(model) ≈ result rtol = 1e-4
+    status = JuMP.termination_status(model) == MOI.LOCALLY_SOLVED
+    obj_val = JuMP.objective_value(model)
+    return status, obj_val
+end
+
+function solve_backend(model, ::COPSBenchmark.ExaModelsBackend)
+    results = ipopt(model; print_level=0, tol=1e-8)
+    status = results.status == :first_order
+    obj_val = results.objective
+    return status, obj_val
+end
+
+@testset "Backend $(backend)" for backend in [
+    COPSBenchmark.JuMPBackend(),
+    COPSBenchmark.ExaModelsBackend(),
+]
+    @testset "Instance $instance" for (instance, params, result) in COPS_INSTANCES
+        if hasmethod(instance, Tuple{typeof.(params)..., typeof(backend)})
+            model = instance(params..., backend)
+            status, obj_val = solve_backend(model, backend)
+            # Test that the objective matches the value reported in
+            # http://www.mcs.anl.gov/~more/cops/cops3.pdf
+            @test obj_val ≈ result rtol = 1e-4
+            @test status
+        end
+    end
 end

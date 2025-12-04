@@ -4,7 +4,7 @@
 # COPS 3.0 - November 2002
 # COPS 3.1 - March 2004
 
-function steering_model(nh)
+function COPSBenchmark.steering_model(nh, ::JuMPBackend)
     a = 100.0  # Magnitude of force.
     # Bounds on the control
     u_min, u_max = -pi/2.0, pi/2.0

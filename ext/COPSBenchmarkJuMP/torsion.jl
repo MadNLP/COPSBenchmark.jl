@@ -3,7 +3,7 @@
 # Version 2.0 - October 2000
 # COPS 3.1 - March 2004
 
-function torsion_model(nx, ny)
+function COPSBenchmark.torsion_model(nx, ny, ::JuMPBackend)
     c = 5.0
     hx = 1.0 / (nx + 1.0)    # grid spacing
     hy = 1.0 / (ny + 1.0)    # grid spacing

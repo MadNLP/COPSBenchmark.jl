@@ -5,7 +5,7 @@
 # COPS 3.0 - November 2002
 # COPS 3.1 - March 2004
 
-function robot_model(nh)
+function COPSBenchmark.robot_model(nh, ::JuMPBackend)
     # total length of arm
     L = 5.0
 
