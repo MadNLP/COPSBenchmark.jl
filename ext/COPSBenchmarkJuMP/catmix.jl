@@ -3,7 +3,7 @@
 # COPS 3.0 - November 2002
 # COPS 3.1 - March 2004
 
-function catmix_model(nh)
+function COPSBenchmark.catmix_model(nh, ::JuMPBackend)
     ne = 2
     nc = 3
 

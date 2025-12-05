@@ -1,0 +1,30 @@
+module COPSBenchmarkJuMP
+
+using Random
+import COPSBenchmark
+import COPSBenchmark: JuMPBackend
+using JuMP
+
+include("bearing.jl")
+include("camshape.jl")
+include("catmix.jl")
+include("chain.jl")
+include("channel.jl")
+include("elec.jl")
+include("gasoil.jl")
+include("glider.jl")
+include("marine.jl")
+include("methanol.jl")
+include("minsurf.jl")
+include("pinene.jl")
+include("polygon.jl")
+include("robot.jl")
+include("rocket.jl")
+include("steering.jl")
+include("tetra.jl")
+include("torsion.jl")
+include("triangle.jl")
+include("pde_utils.jl")
+
+end
+

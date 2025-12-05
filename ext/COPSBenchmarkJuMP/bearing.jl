@@ -4,7 +4,7 @@
 # COPS 3.0 - November 2002
 # COPS 3.1 - March 2004
 
-function bearing_model(nx, ny)
+function COPSBenchmark.bearing_model(nx, ny, ::JuMPBackend)
     b = 10              # grid is (0,2*pi)x(0,2*b)
     e = 0.1             # eccentricity
 
@@ -38,8 +38,8 @@ function bearing_model(nx, ny)
     # Boundary condition
     @constraint(model, [i=1:nx+2], v[i, 1] == 0.0)
     @constraint(model, [i=1:nx+2], v[i, ny+2] == 0.0)
-    @constraint(model, [j=1:nx+2], v[1, j] == 0.0)
-    @constraint(model, [j=1:nx+2], v[nx+2, j] == 0.0)
+    @constraint(model, [j=1:ny+2], v[1, j] == 0.0)
+    @constraint(model, [j=1:ny+2], v[nx+2, j] == 0.0)
 
     return model
 end

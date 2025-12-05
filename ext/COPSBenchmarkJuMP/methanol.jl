@@ -5,7 +5,7 @@
 # COPS 3.0 - November 2002
 # COPS 3.1 - March 2004
 
-function methanol_model(nh)
+function COPSBenchmark.methanol_model(nh, ::JuMPBackend)
     ne = 3
     np = 5
     nc = 3

@@ -1,9 +1,9 @@
 # Minimal surface with obstacle problem
 
-#  Find the surface with minimal area, given boundary conditions, 
+#  Find the surface with minimal area, given boundary conditions,
 #  and above an obstacle.
 
-#  This is problem 17=the COPS (Version 3) collection of 
+#  This is problem 17=the COPS (Version 3) collection of
 #  E. Dolan and J. More'
 #  see "Benchmarking Optimization Software with COPS"
 #  Argonne National Labs Technical Report ANL/MCS-246 (2004)
@@ -11,7 +11,7 @@
 
 # This file has been adapted from https://github.com/JuliaSmoothOptimizers/OptimizationProblems.jl
 
-function minsurf_model(nx::Int, ny::Int)
+function COPSBenchmark.minsurf_model(nx::Int, ny::Int, ::JuMPBackend)
     x_mesh = LinRange(0, 1, nx + 2) # coordinates of the mesh points x
 
     v0 = zeros(nx + 2, ny + 2) # Surface matrix initialization
