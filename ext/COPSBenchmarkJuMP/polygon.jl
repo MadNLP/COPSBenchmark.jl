@@ -8,7 +8,7 @@
 
 # This file has been adapted from https://github.com/JuliaSmoothOptimizers/OptimizationProblems.jl
 
-function COPSBenchmark.polygon_model(n::Int, ::JuMPBackend)
+function COPSBenchmark.polygon_model(::JuMPBackend, n::Int)
     nlp = Model()
     N = div(n, 2)
     @variable(nlp, 0 <= r[1:N] <= 1, start = 1)

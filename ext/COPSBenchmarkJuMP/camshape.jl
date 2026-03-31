@@ -4,7 +4,7 @@
 # COPS 3.0 - November 2002
 # COPS 3.1 - March 2004
 
-function COPSBenchmark.camshape_model(n, ::JuMPBackend)
+function COPSBenchmark.camshape_model(::JuMPBackend, n)
     R_v = 1.0         # design parameter related to the valve shape
     R_max = 2.0       # maximum allowed radius of the cam
     R_min = 1.0       # minimum allowed radius of the cam

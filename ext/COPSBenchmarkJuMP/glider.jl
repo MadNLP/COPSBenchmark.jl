@@ -5,7 +5,7 @@
 # COPS 3.0 - November 2002
 # COPS 3.1 - March 2004
 
-function COPSBenchmark.glider_model(nh, ::JuMPBackend)
+function COPSBenchmark.glider_model(::JuMPBackend, nh)
     # Design parameters
     x_0 = 0.0
     y_0 = 1000.0

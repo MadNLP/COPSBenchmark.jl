@@ -11,7 +11,7 @@
 
 # This file has been adapted from https://github.com/JuliaSmoothOptimizers/OptimizationProblems.jl
 
-function COPSBenchmark.minsurf_model(nx::Int, ny::Int, ::JuMPBackend)
+function COPSBenchmark.minsurf_model(::JuMPBackend, nx::Int, ny::Int)
     x_mesh = LinRange(0, 1, nx + 2) # coordinates of the mesh points x
 
     v0 = zeros(nx + 2, ny + 2) # Surface matrix initialization

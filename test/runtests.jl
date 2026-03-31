@@ -61,8 +61,8 @@ end
     COPSBenchmark.ExaModelsBackend(),
 ]
     @testset "Instance $instance" for (instance, params, result) in COPS_INSTANCES
-        if hasmethod(instance, Tuple{typeof.(params)..., typeof(backend)})
-            model = instance(params..., backend)
+        if hasmethod(instance, Tuple{typeof(backend), typeof.(params)...})
+            model = instance(backend, params...)
             status, obj_val = solve_backend(model, backend)
             # Test that the objective matches the value reported in
             # http://www.mcs.anl.gov/~more/cops/cops3.pdf

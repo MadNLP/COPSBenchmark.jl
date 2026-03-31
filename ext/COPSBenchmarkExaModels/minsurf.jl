@@ -9,7 +9,7 @@
 #  Argonne National Labs Technical Report ANL/MCS-246 (2004)
 #  classification OBR2-AN-V-V
 
-function COPSBenchmark.minsurf_model(nx::Int, ny::Int, ::ExaModelsBackend; T = Float64, backend = nothing, kwargs...)
+function COPSBenchmark.minsurf_model(::ExaModelsBackend, nx::Int, ny::Int; T = Float64, backend = nothing, kwargs...)
     x_mesh = LinRange(0, 1, nx + 2) # coordinates of the mesh points x
 
     v0 = zeros(nx + 2, ny + 2) # Surface matrix initialization
@@ -22,42 +22,48 @@ function COPSBenchmark.minsurf_model(nx::Int, ny::Int, ::ExaModelsBackend; T = F
     area = 1 // 2 * hx * hy
 
     c = ExaModels.ExaCore(T; backend = backend)
-    v = ExaModels.variable(c, nx+2, ny+2; start = v0)
+    ExaModels.@var(c, v, nx+2, ny+2; start = v0)
 
-    ExaModels.objective(c, area * (1 + ((v[i + 1, j] - v[i, j]) / hx)^2 + ((v[i, j + 1] - v[i, j]) / hy)^2)^(1 / 2) for
+    ExaModels.@obj(c, area * (1 + ((v[i + 1, j] - v[i, j]) / hx)^2 + ((v[i, j + 1] - v[i, j]) / hy)^2)^(1 / 2) for
                         i = 1:(nx + 1), j = 1:(ny + 1))
-    ExaModels.objective(c, area * (1 + ((v[i - 1, j] - v[i, j]) / hx)^2 + ((v[i, j - 1] - v[i, j]) / hy)^2)^(1 / 2) for
+    ExaModels.@obj(c, area * (1 + ((v[i - 1, j] - v[i, j]) / hx)^2 + ((v[i, j - 1] - v[i, j]) / hy)^2)^(1 / 2) for
                          i = 2:(nx + 2), j = 2:(ny + 2))
 
-    ExaModels.constraint(
+    ExaModels.@con(
         c,
+        c1,
         v[1, j + 1] for j in 0:ny+1
     )
 
-    ExaModels.constraint(
+    ExaModels.@con(
         c,
+        c2,
         v[nx + 2, j + 1] for j in 0:ny+1
     )
 
-    ExaModels.constraint(
+    ExaModels.@con(
         c,
+        c3,
         v[i + 1, 1] - 1 + (2 * i * hx - 1)^2 for i in 0:nx+1
     )
 
-    ExaModels.constraint(
+    ExaModels.@con(
         c,
+        c4,
         v[i + 1, ny+2] - 1 + (2 * i * hx - 1)^2 for i in 0:nx+1
     )
 
-    ExaModels.constraint(
+    ExaModels.@con(
         c,
+        c5,
         v[i + 1, j + 1] for j in 0:ny+1, i in 0:nx+1;
         lcon = 0,
         ucon = Inf
     )
 
-    ExaModels.constraint(
+    ExaModels.@con(
         c,
+        c6,
         v[i + 1, j + 1] for i in Int(floor(0.25 / hx)):Int(ceil(0.75 / hx)), j in Int(floor(0.25 / hy)):Int(ceil(0.75 / hy));
         lcon = 1,
         ucon = Inf

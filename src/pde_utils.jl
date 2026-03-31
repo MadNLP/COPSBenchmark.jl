@@ -131,7 +131,7 @@ end
 #   Lane-Emden-Fowler: c(x) = 1
 #   Henon            : c(x) = |x|^(2*l)
 ###############################################################################
-function dirichlet_model(nh, backend::AbstractModelerBackend; kwargs...)
+function dirichlet_model(backend::AbstractModelerBackend, nh; kwargs...)
     dom = PDEDiscretizationDomain(nh, CIRCLE_DOMAIN)
     pb = PDEProblem(
         0.01,
@@ -140,7 +140,7 @@ function dirichlet_model(nh, backend::AbstractModelerBackend; kwargs...)
         fill(0.0, dom.NODES),
         fill(3.0, dom.NODES),
     )
-    return transition_state_model(pb, dom, backend; kwargs...)
+    return transition_state_model(backend, pb, dom; kwargs...)
 end
 
 ###############################################################################
@@ -154,7 +154,7 @@ end
 #   Lane-Emden-Fowler: c(x) = 1
 #   Henon            : c(x) = |x|^(2*l)
 ###############################################################################
-function henon_model(nh, backend::AbstractModelerBackend; kwargs...)
+function henon_model(backend::AbstractModelerBackend, nh; kwargs...)
     dom = PDEDiscretizationDomain(nh, CIRCLE_REC_DOMAIN)
     pb = PDEProblem(
         1.0,
@@ -163,7 +163,7 @@ function henon_model(nh, backend::AbstractModelerBackend; kwargs...)
         fill(0.0, dom.NODES),
         fill(3.0, dom.NODES),
     )
-    return transition_state_model(pb, dom, backend; kwargs...)
+    return transition_state_model(backend, pb, dom; kwargs...)
 end
 
 ###############################################################################
@@ -177,7 +177,7 @@ end
 #   Lane-Emden-Fowler: c(x) = 1
 #   Henon            : c(x) = |x|^(2*l)
 ###############################################################################
-function lane_emden_model(nh, backend::AbstractModelerBackend; kwargs...)
+function lane_emden_model(backend::AbstractModelerBackend, nh; kwargs...)
     dom = PDEDiscretizationDomain(nh, RECTANGLE_DOMAIN)
     pb = PDEProblem(
         1.0,
@@ -186,7 +186,7 @@ function lane_emden_model(nh, backend::AbstractModelerBackend; kwargs...)
         fill(0.0, dom.NODES),
         fill(3.0, dom.NODES),
     )
-    return transition_state_model(pb, dom, backend; kwargs...)
+    return transition_state_model(backend, pb, dom; kwargs...)
 end
 
 

@@ -4,7 +4,7 @@
 # COPS 3.0 - November 2002
 # COPS 3.1 - March 2004
 
-function COPSBenchmark.elec_model(np, ::JuMPBackend)
+function COPSBenchmark.elec_model(::JuMPBackend, np)
     Random.seed!(2713)
 
     # Set the starting point to a quasi-uniform distribution

@@ -5,7 +5,7 @@
 # COPS 3.0 - November 2002
 # COPS 3.1 - March 2004
 #
-function COPSBenchmark.pinene_model(nh, ::JuMPBackend)
+function COPSBenchmark.pinene_model(::JuMPBackend, nh)
     nc = 3        # number of collocation points
     ne = 5        # number of differential equations
     np = 5        # number of ODE parameters

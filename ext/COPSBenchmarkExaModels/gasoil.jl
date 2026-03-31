@@ -5,7 +5,7 @@
 # COPS 3.0 - November 2002
 # COPS 3.1 - March 2004
 
-function COPSBenchmark.gasoil_model(nh, ::ExaModelsBackend; T = Float64, backend = nothing, kwargs...)
+function COPSBenchmark.gasoil_model(::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...)
     nc = 4        # number of collocation points
     ne = 2        # number of differential equations
     np = 3        # number of ODE parameters
@@ -65,48 +65,53 @@ function COPSBenchmark.gasoil_model(nh, ::ExaModelsBackend; T = Float64, backend
     core = ExaModels.ExaCore(T; backend= backend)
 
     # ODE parameters
-    theta = ExaModels.variable(core, 1:np; lvar = 0.0, start=0.0)
+    ExaModels.@var(core, theta, 1:np; lvar = 0.0, start=0.0)
     # The collocation approximation u is defined by the parameters v and w.
     # uc and Duc are, respectively, u and u' evaluated at the collocation points.
-    v = ExaModels.variable(core, 1:nh, 1:ne; start=[v0[i, s] for i =1:nh, s = 1:ne])
-    w = ExaModels.variable(core, 1:nh, 1:nc, 1:ne; start=0.0)
-    uc = ExaModels.variable(core, 1:nh, 1:nc, 1:ne; start=[v0[i, s] for i =1:nh, j=1:nc, s = 1:ne])
-    Duc = ExaModels.variable(core, 1:nh, 1:nc, 1:ne; start=0.0)
+    ExaModels.@var(core, v, 1:nh, 1:ne; start=[v0[i, s] for i =1:nh, s = 1:ne])
+    ExaModels.@var(core, w, 1:nh, 1:nc, 1:ne; start=0.0)
+    ExaModels.@var(core, uc, 1:nh, 1:nc, 1:ne; start=[v0[i, s] for i =1:nh, j=1:nc, s = 1:ne])
+    ExaModels.@var(core, Duc, 1:nh, 1:nc, 1:ne; start=0.0)
 
     itr = [(j, s, itau[j], tau[j], t[itau[j]], z[j,s]) for j=1:nm, s in 1:ne]
     itr2 = [(j,rho[j]) for j=1:nc]
 
     # L2 error
-    ExaModels.objective(core, (v[itauj,s] + sum(w[itauj,k,s]*(tauj-tj)^k/(factorial(k)*h^(k-1)) for k in 1:nc) - zjs)^2 for (j,s,itauj, tauj, tj, zjs) in itr)
+    ExaModels.@obj(core, (v[itauj,s] + sum(w[itauj,k,s]*(tauj-tj)^k/(factorial(k)*h^(k-1)) for k in 1:nc) - zjs)^2 for (j,s,itauj, tauj, tj, zjs) in itr)
 
     # Collocation model
-    ExaModels.constraint(
+    ExaModels.@con(
         core,
+        c1,
         - uc[i, j, s] + v[i,s] + h*sum(w[i,k,s]*(rhoj^k/factorial(k)) for k in 1:nc)
         for i=1:nh, (j,rhoj) in itr2, s=1:ne
     )
-    ExaModels.constraint(
+    ExaModels.@con(
         core,
+        c2,
         - Duc[i, j, s] + sum(w[i,k,s]*(rhoj^(k-1)/factorial(k-1)) for k in 1:nc)
         for i=1:nh, (j,rhoj) in itr2, s=1:ne
     )
 
     # Boundary
     itr3 = [(s,z[1, s]) for s=1:ne]
-    ExaModels.constraint(core, - v[1, s] + z1s for (s,z1s) in itr3) #TODO
+    ExaModels.@con(core, c3, - v[1, s] + z1s for (s,z1s) in itr3) #TODO
     # Continuity
-    ExaModels.constraint(
+    ExaModels.@con(
         core,
+        c4,
         v[i, s] + sum(w[i, j, s]*h/factorial(j) for j in 1:nc) - v[i+1, s]
         for i=1:nh-1, s=1:ne
     )
-    ExaModels.constraint(
+    ExaModels.@con(
         core,
+        c5,
         - Duc[i, j, 1] - (theta[1]+theta[3])*uc[i, j, 1]^2
         for i=1:nh, j=1:nc
     )
-    ExaModels.constraint(
+    ExaModels.@con(
         core,
+        c6,
         - Duc[i, j, 2] + theta[1]*uc[i,j,1]^2 - theta[2]*uc[i,j,2]
         for i=1:nh, j=1:nc
     )
