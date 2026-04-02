@@ -5,7 +5,7 @@
 # COPS 3.0 - November 2002
 # COPS 3.1 - March 2004
 
-function COPSBenchmark.robot_model(::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...)
+@inline function COPSBenchmark.robot_model(::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...)
 
     # total length of arm
     L = 5.0
@@ -32,12 +32,12 @@ function COPSBenchmark.robot_model(::ExaModelsBackend, nh; T = Float64, backend 
     ExaModels.@var(core, u_the, nh+1; start=0.0, lvar = -max_u_the, uvar = max_u_the)
     ExaModels.@var(core, u_phi, nh+1; start=0.0, lvar = -max_u_phi, uvar = max_u_phi)
     # Steps and final time
-    ExaModels.@var(core, step; lvar = 0.0)
+    ExaModels.@var(core, step, 1; start = 0.0, lvar = 0.0)
     # The moments of inertia
     ExaModels.@var(core, I_the, nh+1; start=((L-rho0)^3+rho0^3)*(sin(phi0))^2/3.0)
     ExaModels.@var(core, I_phi, nh+1; start=((L-rho0)^3+rho0^3)/3.0)
 
-    ExaModels.@obj(core, step * nh for i=1:1)
+    ExaModels.@obj(core, step[1] * nh for i=1:1)
 
     # Physical equations
     ExaModels.@con(
@@ -54,33 +54,33 @@ function COPSBenchmark.robot_model(::ExaModelsBackend, nh; T = Float64, backend 
     ExaModels.@con(
         core,
         c3,
-        - rho[j] + rho[j-1] + 0.5 * step * (rho_dot[j] + rho_dot[j-1]) for j=2:nh+1
+        - rho[j] + rho[j-1] + 0.5 * step[1] * (rho_dot[j] + rho_dot[j-1]) for j=2:nh+1
             )
     ExaModels.@con(
         core,
         c4,
-        - phi[j] + phi[j-1] + 0.5 * step * (phi_dot[j] + phi_dot[j-1]) for j=2:nh+1
+        - phi[j] + phi[j-1] + 0.5 * step[1] * (phi_dot[j] + phi_dot[j-1]) for j=2:nh+1
             )
     ExaModels.@con(
         core,
         c5,
-        - the[j] + the[j-1] + 0.5 * step * (the_dot[j] + the_dot[j-1]) for j=2:nh+1
+        - the[j] + the[j-1] + 0.5 * step[1] * (the_dot[j] + the_dot[j-1]) for j=2:nh+1
     )
 
     ExaModels.@con(
         core,
         c6,
-        - rho_dot[j] + rho_dot[j-1] + 0.5 * step * (u_rho[j] + u_rho[j-1]) / L for j=2:nh+1
+        - rho_dot[j] + rho_dot[j-1] + 0.5 * step[1] * (u_rho[j] + u_rho[j-1]) / L for j=2:nh+1
     )
     ExaModels.@con(
         core,
         c7,
-        - the_dot[j] + the_dot[j-1] + 0.5 * step * (u_the[j] / I_the[j] + u_the[j-1] / I_the[j-1]) for j=2:nh+1
+        - the_dot[j] + the_dot[j-1] + 0.5 * step[1] * (u_the[j] / I_the[j] + u_the[j-1] / I_the[j-1]) for j=2:nh+1
     )
     ExaModels.@con(
         core,
         c8,
-        - phi_dot[j] + phi_dot[j-1] + 0.5 * step * (u_phi[j] / I_phi[j] + u_phi[j-1] / I_phi[j-1]) for j=2:nh+1
+        - phi_dot[j] + phi_dot[j-1] + 0.5 * step[1] * (u_phi[j] / I_phi[j] + u_phi[j-1] / I_phi[j-1]) for j=2:nh+1
             )
     ExaModels.@con(
         core, c9, - rho[1] + 4.5

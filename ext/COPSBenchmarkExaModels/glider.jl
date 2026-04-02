@@ -5,7 +5,7 @@
 # COPS 3.0 - November 2002
 # COPS 3.1 - March 2004
 
-function COPSBenchmark.glider_model(::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...)
+@inline function COPSBenchmark.glider_model(::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...)
     # Design parameters
     x_0 = 0.0
     y_0 = 1000.0
@@ -18,8 +18,8 @@ function COPSBenchmark.glider_model(::ExaModelsBackend, nh; T = Float64, backend
     r_0 = 100.0
     m = 100.0
     g = 9.81
-    c0 = 0.034
-    c1 = 0.069662
+    cd0 = 0.034
+    cd1 = 0.069662
     S = 14.0
     rho = 1.13
     cL_min = 0.0
@@ -32,7 +32,7 @@ function COPSBenchmark.glider_model(::ExaModelsBackend, nh; T = Float64, backend
     u0 = zeros(nh+1)
     w0 = [vy_0 - u0[i] for i in 1:nh+1]
     v0 = [sqrt(vx_0^2 + w0[i]^2) for i in 1:nh+1]
-    D0 = [0.5*(c0+c1*cL0^2)*rho*S*v0[i]^2 for i in 1:nh+1]
+    D0 = [0.5*(cd0+cd1*cL0^2)*rho*S*v0[i]^2 for i in 1:nh+1]
     L0 = [0.5*cL0*rho*S*v0[i]^2 for i in 1:nh+1]
     vxdot0 = [-L0[i]*w0[i]/v0[i]/m - D0[i]*vx_0/v0[i]/m for i in 1:nh+1]
     vydot0 = [L0[i]*vx_0/v0[i]/m - D0[i]*w0[i]/v0[i]/m for i in 1:nh+1]
@@ -47,14 +47,14 @@ function COPSBenchmark.glider_model(::ExaModelsBackend, nh; T = Float64, backend
     ExaModels.@var(c, cL, nh+1; lvar = fill(cL_min,nh+1), uvar = fill(cL_max, nh+1), start = fill(cL0, nh+1))
 
     # Functions that define the glider (lifted variable space)
-    ExaModels.@var(c, r, nh+1, start=r0)
-    ExaModels.@var(c, u, nh+1, start=u0)
-    ExaModels.@var(c, w, nh+1, start=w0)
-    ExaModels.@var(c, v, nh+1, start=v0)
-    ExaModels.@var(c, D, nh+1, start=D0)
-    ExaModels.@var(c, L, nh+1, start=L0)
-    ExaModels.@var(c, vx_dot, nh+1, start=vxdot0)
-    ExaModels.@var(c, vy_dot, nh+1, start=vydot0)
+    ExaModels.@var(c, r, nh+1; start=r0)
+    ExaModels.@var(c, u, nh+1; start=u0)
+    ExaModels.@var(c, w, nh+1; start=w0)
+    ExaModels.@var(c, v, nh+1; start=v0)
+    ExaModels.@var(c, D, nh+1; start=D0)
+    ExaModels.@var(c, L, nh+1; start=L0)
+    ExaModels.@var(c, vx_dot, nh+1; start=vxdot0)
+    ExaModels.@var(c, vy_dot, nh+1; start=vydot0)
 
     ExaModels.@obj(c, -x[nh+1])
 
@@ -63,7 +63,7 @@ function COPSBenchmark.glider_model(::ExaModelsBackend, nh; T = Float64, backend
     ExaModels.@con(c, c2, u[i] - u_c*(1 - r[i])*exp(-r[i]) for i in 1:nh+1)
     ExaModels.@con(c, c3, w[i] - vy[i] + u[i] for i in 1:nh+1)
     ExaModels.@con(c, c4, v[i] - sqrt(vx[i]^2 + w[i]^2) for i in 1:nh+1)
-    ExaModels.@con(c, c5, D[i] - 0.5*(c0+c1*cL[i]^2)*rho*S*v[i]^2 for i in 1:nh+1)
+    ExaModels.@con(c, c5, D[i] - 0.5*(cd0+cd1*cL[i]^2)*rho*S*v[i]^2 for i in 1:nh+1)
     ExaModels.@con(c, c6, L[i] - 0.5*cL[i]*rho*S*v[i]^2 for i in 1:nh+1)
     ExaModels.@con(c, c7, vx_dot[i] + L[i]*w[i]/v[i]/m + D[i]*vx[i]/v[i]/m for i in 1:nh+1)
     ExaModels.@con(c, c8, vy_dot[i] - L[i]*vx[i]/v[i]/m + D[i]*w[i]/v[i]/m + g for i in 1:nh+1)

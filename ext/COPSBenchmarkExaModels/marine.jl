@@ -5,7 +5,7 @@
 # COPS 3.0 - November 2002
 # COPS 3.1 - March 2004
 
-function COPSBenchmark.marine_model(::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...)
+@inline function COPSBenchmark.marine_model(::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...)
     nc = 1     # number of collocation points
     ne = 8     # number of differential equations
     nm = 21    # number of measurements

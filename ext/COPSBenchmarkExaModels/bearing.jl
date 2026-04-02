@@ -4,7 +4,7 @@
 # COPS 3.0 - November 2002
 # COPS 3.1 - March 2004
 
-function COPSBenchmark.bearing_model(::ExaModelsBackend, nx, ny; T = Float64, backend = nothing, kwargs...)
+@inline function COPSBenchmark.bearing_model(::ExaModelsBackend, nx, ny; T = Float64, backend = nothing, kwargs...)
     b = 10              # grid is (0,2*pi)x(0,2*b)
     e = 0.1             # eccentricity
 

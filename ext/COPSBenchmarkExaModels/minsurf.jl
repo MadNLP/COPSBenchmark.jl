@@ -9,7 +9,7 @@
 #  Argonne National Labs Technical Report ANL/MCS-246 (2004)
 #  classification OBR2-AN-V-V
 
-function COPSBenchmark.minsurf_model(::ExaModelsBackend, nx::Int, ny::Int; T = Float64, backend = nothing, kwargs...)
+@inline function COPSBenchmark.minsurf_model(::ExaModelsBackend, nx::Int, ny::Int; T = Float64, backend = nothing, kwargs...)
     x_mesh = LinRange(0, 1, nx + 2) # coordinates of the mesh points x
 
     v0 = zeros(nx + 2, ny + 2) # Surface matrix initialization

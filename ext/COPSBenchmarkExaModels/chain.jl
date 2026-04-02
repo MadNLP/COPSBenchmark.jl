@@ -8,7 +8,7 @@
 #   see "Benchmarking Optimization Software with COPS"
 #   Argonne National Labs Technical Report ANL/MCS-246 (2004)
 
-function COPSBenchmark.chain_model(::ExaModelsBackend, n; T = Float64, backend = nothing, kwargs...)
+@inline function COPSBenchmark.chain_model(::ExaModelsBackend, n; T = Float64, backend = nothing, kwargs...)
     nh = max(2, div(n - 4, 4))
 
     L = 4

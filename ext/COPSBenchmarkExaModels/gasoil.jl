@@ -5,7 +5,7 @@
 # COPS 3.0 - November 2002
 # COPS 3.1 - March 2004
 
-function COPSBenchmark.gasoil_model(::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...)
+@inline function COPSBenchmark.gasoil_model(::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...)
     nc = 4        # number of collocation points
     ne = 2        # number of differential equations
     np = 3        # number of ODE parameters
