@@ -3,7 +3,9 @@ using Test
 using JuMP
 using Ipopt
 using ExaModels
+using NLPModels
 using NLPModelsIpopt
+using NLPModelsJuMP
 using COPSBenchmark
 
 COPS_INSTANCES = [
@@ -70,4 +72,48 @@ end
             @test status
         end
     end
+end
+
+# Models without lifted variables (same variable/constraint space in both backends).
+COMPARE_INSTANCES = [
+    (COPSBenchmark.bearing_model, (10, 10)),
+    (COPSBenchmark.camshape_model, (100,)),
+    (COPSBenchmark.catmix_model, (10,)),
+    (COPSBenchmark.chain_model, (100,)),
+    (COPSBenchmark.elec_model, (25,)),
+    (COPSBenchmark.gasoil_model, (10,)),
+    (COPSBenchmark.marine_model, (10,)),
+    (COPSBenchmark.methanol_model, (10,)),
+    (COPSBenchmark.minsurf_model, (10, 10)),
+    (COPSBenchmark.pinene_model, (10,)),
+    (COPSBenchmark.rocket_model, (50,)),
+    (COPSBenchmark.steering_model, (50,)),
+]
+
+@testset "Compare callbacks: $instance" for (instance, params) in COMPARE_INSTANCES
+    jump_model = instance(params..., COPSBenchmark.JuMPBackend())
+    exa_model = instance(params..., COPSBenchmark.ExaModelsBackend())
+
+    jump_nlp = MathOptNLPModel(jump_model)
+
+    # Structural comparison
+    @test get_nvar(jump_nlp) == get_nvar(exa_model)
+    @test get_ncon(jump_nlp) == get_ncon(exa_model)
+
+    # Variable bounds
+    @test get_lvar(jump_nlp) ≈ get_lvar(exa_model)
+    @test get_uvar(jump_nlp) ≈ get_uvar(exa_model)
+
+    # Constraint bounds
+    @test get_lcon(jump_nlp) ≈ get_lcon(exa_model)
+    @test get_ucon(jump_nlp) ≈ get_ucon(exa_model)
+
+    # Starting point
+    @test jump_nlp.meta.x0 ≈ exa_model.meta.x0
+
+    # Callbacks at starting point
+    x0 = jump_nlp.meta.x0
+    @test obj(jump_nlp, x0) ≈ obj(exa_model, x0) rtol = 1e-6
+    @test grad(jump_nlp, x0) ≈ grad(exa_model, x0) rtol = 1e-6
+    @test cons(jump_nlp, x0) ≈ cons(exa_model, x0) rtol = 1e-6
 end
