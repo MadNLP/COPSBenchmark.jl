@@ -1,7 +1,7 @@
-const RECTANGLE_DOMAIN = Dict(
-    :NODES => 545,
-    :ELEMS => 1024,
-    :COORDS => [
+const RECTANGLE_DOMAIN = PDERawDomain(
+    NODES = 545,
+    ELEMS = 1024,
+    COORDS = [
         -1.000000000e+00 -1.000000000e+00;
         1.000000000e+00 -1.000000000e+00;
         1.000000000e+00 1.000000000e+00;
@@ -548,7 +548,7 @@ const RECTANGLE_DOMAIN = Dict(
         9.375000000e-01 8.125000000e-01;
         9.375000000e-01 9.375000000e-01;
     ],
-    :BNDRY => [
+    BNDRY = [
         1;
         1;
         1;
@@ -1095,7 +1095,7 @@ const RECTANGLE_DOMAIN = Dict(
         0;
         0;
     ],
-    :US => [
+    US = [
         0.000000000e+00;
         0.000000000e+00;
         0.000000000e+00;
@@ -1642,7 +1642,7 @@ const RECTANGLE_DOMAIN = Dict(
         0.000000000e+00;
         0.000000000e+00;
     ],
-    :UE => [
+    UE = [
         0.000000000e+00;
         0.000000000e+00;
         0.000000000e+00;
@@ -2189,7 +2189,7 @@ const RECTANGLE_DOMAIN = Dict(
         7.797241211e-03;
         7.797241211e-03;
     ],
-    :TRIANG => [
+    TRIANG = [
         260 13 504;
         146 290 82;
         487 248 4;

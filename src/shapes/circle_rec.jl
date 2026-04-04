@@ -1,7 +1,7 @@
-const CIRCLE_REC_DOMAIN = Dict(
-    :NODES => 398,
-    :ELEMS => 668,
-    :COORDS => [
+const CIRCLE_REC_DOMAIN = PDERawDomain(
+    NODES = 398,
+    ELEMS = 668,
+    COORDS = [
         1.000000000e+00 0.000000000e+00;
         9.921147013e-01 1.253332336e-01;
         9.685831611e-01 2.486898872e-01;
@@ -401,7 +401,7 @@ const CIRCLE_REC_DOMAIN = Dict(
         5.418990269e-01 -4.073985952e-01;
         5.000000000e-01 -3.125000000e-01;
     ],
-    :BNDRY => [
+    BNDRY = [
         1;
         1;
         1;
@@ -801,7 +801,7 @@ const CIRCLE_REC_DOMAIN = Dict(
         0;
         1;
     ],
-    :US => [
+    US = [
         0.000000000e+00;
         0.000000000e+00;
         0.000000000e+00;
@@ -1201,7 +1201,7 @@ const CIRCLE_REC_DOMAIN = Dict(
         0.000000000e+00;
         0.000000000e+00;
     ],
-    :UE => [
+    UE = [
         0.000000000e+00;
         0.000000000e+00;
         0.000000000e+00;
@@ -1601,7 +1601,7 @@ const CIRCLE_REC_DOMAIN = Dict(
         5.865523583e-02;
         0.000000000e+00;
     ],
-    :TRIANG => [
+    TRIANG = [
         32 253 31;
         326 325 135;
         76 178 179;

@@ -1,8 +1,4 @@
 
-include("shapes/circle.jl")
-include("shapes/circle_rec.jl")
-include("shapes/rectangle.jl")
-
 struct PDEProblem
     a::Float64
     b::Vector{Float64}
@@ -10,6 +6,23 @@ struct PDEProblem
     d::Vector{Float64}
     p::Vector{Float64}
 end
+
+# Raw domain data loaded from shape files (type-stable replacement for Dict{Symbol,Any}).
+struct PDERawDomain
+    NODES::Int
+    ELEMS::Int
+    COORDS::Matrix{Float64}
+    TRIANG::Matrix{Int}
+    BNDRY::Vector{Int}
+    US::Vector{Float64}
+    UE::Vector{Float64}
+end
+PDERawDomain(; NODES, ELEMS, COORDS, TRIANG, BNDRY, US, UE) =
+    PDERawDomain(NODES, ELEMS, COORDS, TRIANG, BNDRY, US, UE)
+
+include("shapes/circle.jl")
+include("shapes/circle_rec.jl")
+include("shapes/rectangle.jl")
 
 struct PDEDiscretizationDomain
     NODES::Int
@@ -25,17 +38,15 @@ struct PDEDiscretizationDomain
     UE::Vector{Float64}
 end
 
-function PDEDiscretizationDomain(nh, domain::Dict)
-    NODES = domain[:NODES]
-    ELEMS = domain[:ELEMS]
-    COORDS = domain[:COORDS]
-    ELEMS = domain[:ELEMS]
-    BNDRY = domain[:BNDRY]
+function PDEDiscretizationDomain(nh, domain::PDERawDomain)
+    NODES = domain.NODES
+    ELEMS = domain.ELEMS
+    COORDS = domain.COORDS
+    BNDRY = domain.BNDRY
+    TRIANG = domain.TRIANG
     DIMEN = 2
     BREAK = nh
 
-    # Description of triangular elements
-    TRIANG = domain[:TRIANG]
     # Edge lengths
     EDGE = [
         COORDS[TRIANG[e, mod(d1, DIMEN+1)+1], d2] - COORDS[TRIANG[e, d1], d2]
@@ -43,13 +54,27 @@ function PDEDiscretizationDomain(nh, domain::Dict)
     ]
     # Area of element
     AREA = [(EDGE[e, 1, 1]*EDGE[e, 2, 2] - EDGE[e, 1, 2]*EDGE[e, 2, 1]) / 2.0 for e in 1:ELEMS]
-    US = domain[:US] # starting point
-    UE = domain[:UE] # ending point
+    US = domain.US # starting point
+    UE = domain.UE # ending point
 
     return PDEDiscretizationDomain(
         NODES, ELEMS, DIMEN, BREAK,
         AREA, TRIANG, COORDS, BNDRY, EDGE, US, UE,
     )
+end
+
+# Backward-compatible constructor from Dict (deprecated)
+function PDEDiscretizationDomain(nh, domain::Dict)
+    raw = PDERawDomain(
+        domain[:NODES],
+        domain[:ELEMS],
+        domain[:COORDS],
+        domain[:TRIANG],
+        domain[:BNDRY],
+        domain[:US],
+        domain[:UE],
+    )
+    return PDEDiscretizationDomain(nh, raw)
 end
 
 function _update_values!(integral, energy, u, problem::PDEProblem, dom::PDEDiscretizationDomain)
