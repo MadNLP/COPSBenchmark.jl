@@ -8,7 +8,7 @@
 
 include(joinpath(@__DIR__, "..", "..", "data", "triangle.jl"))
 
-function _triangle_model_exa(x0, TRIS::Vector{Int64}, Const::Vector{Int64}; T = Float64, backend = nothing, kwargs...)
+@inline function _triangle_model_exa(x0, TRIS::Vector{Int64}, Const::Vector{Int64}; T = Float64, backend = nothing, kwargs...)
     τ = 0.0
     n = length(x0)
     N = Int(div(n, 2))

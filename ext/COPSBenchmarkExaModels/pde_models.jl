@@ -1,5 +1,5 @@
 
-function COPSBenchmark.transition_state_model(::ExaModelsBackend, problem, dom::COPSBenchmark.PDEDiscretizationDomain; T = Float64, backend = nothing, kwargs...)
+@inline function COPSBenchmark.transition_state_model(::ExaModelsBackend, problem, dom::COPSBenchmark.PDEDiscretizationDomain; T = Float64, backend = nothing, kwargs...)
     a, b, c, d, p = problem.a, problem.b, problem.c, problem.d, problem.p
     x0 = COPSBenchmark._initial_position!(problem, dom, 10)
     array1 = [

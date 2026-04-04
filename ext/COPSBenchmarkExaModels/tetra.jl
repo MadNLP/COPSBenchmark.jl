@@ -8,7 +8,7 @@
 
 include(joinpath(@__DIR__, "..", "..", "data", "tetra.jl"))
 
-function _tetra_model_exa(x0, TETS::Vector{Int64}, Const::Vector{Int64}; T = Float64, backend = nothing, kwargs...)
+@inline function _tetra_model_exa(x0, TETS::Vector{Int64}, Const::Vector{Int64}; T = Float64, backend = nothing, kwargs...)
     τ = 0.0
     n = length(x0)
     N = round(Int, n / 3)
