@@ -18,8 +18,8 @@
     r_0 = 100.0
     m = 100.0
     g = 9.81
-    c0 = 0.034
-    c1 = 0.069662
+    cd0 = 0.034
+    cd1 = 0.069662
     S = 14.0
     rho = 1.13
     cL_min = 0.0
@@ -40,7 +40,7 @@
     ExaModels.@expr(c, u, u_c*(1 - r[i])*exp(-r[i]) for i in 1:nh+1)
     ExaModels.@expr(c, w, vy[i] - u[i] for i in 1:nh+1)
     ExaModels.@expr(c, v, sqrt(vx[i]^2 + w[i]^2) for i in 1:nh+1)
-    ExaModels.@expr(c, D, 0.5*(c0+c1*cL[i]^2)*rho*S*v[i]^2 for i in 1:nh+1)
+    ExaModels.@expr(c, D, 0.5*(cd0+cd1*cL[i]^2)*rho*S*v[i]^2 for i in 1:nh+1)
     ExaModels.@expr(c, L, 0.5*cL[i]*rho*S*v[i]^2 for i in 1:nh+1)
     ExaModels.@expr(c, vx_dot, (-L[i]*(w[i]/v[i]) - D[i]*(vx[i]/v[i]))/m for i in 1:nh+1)
     ExaModels.@expr(c, vy_dot, (L[i]*(vx[i]/v[i]) - D[i]*(w[i]/v[i]))/m - g for i in 1:nh+1)
