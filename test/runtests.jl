@@ -82,6 +82,7 @@ COMPARE_INSTANCES = [
     (COPSBenchmark.camshape_model, (100,)),
     (COPSBenchmark.catmix_model, (10,)),
     (COPSBenchmark.chain_model, (100,)),
+    (COPSBenchmark.channel_model, (20,)),
     (COPSBenchmark.elec_model, (25,)),
     (COPSBenchmark.gasoil_model, (10,)),
     (COPSBenchmark.glider_model, (20,)),
@@ -92,6 +93,7 @@ COMPARE_INSTANCES = [
     (COPSBenchmark.robot_model, (20,)),
     (COPSBenchmark.rocket_model, (50,)),
     (COPSBenchmark.steering_model, (50,)),
+    (COPSBenchmark.torsion_model, (10, 10)),
 ]
 
 @testset "Compare callbacks: $instance" for (instance, params) in COMPARE_INSTANCES
