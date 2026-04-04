@@ -59,4 +59,3 @@ result = ipopt(model; print_level=0)
 ## References
 
 - E. D. Dolan and J. J. Moré, "Benchmarking Optimization Software with COPS 3.0," Argonne National Laboratory Technical Report ANL/MCS-273, 2004.
-- S. Shin, F. Pacaud, and M. Anitescu, "Accelerating optimal power flow with GPUs: SIMD abstraction of nonlinear programs and condensed-space interior-point methods," arXiv:2307.16830, 2023.
