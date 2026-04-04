@@ -6,6 +6,8 @@ using ExaModels
 using NLPModels
 using NLPModelsIpopt
 using NLPModelsJuMP
+using SparseArrays
+using LinearAlgebra
 using COPSBenchmark
 
 COPS_INSTANCES = [
@@ -113,7 +115,34 @@ COMPARE_INSTANCES = [
 
     # Callbacks at starting point
     x0 = jump_nlp.meta.x0
+    n = get_nvar(jump_nlp)
+    m = get_ncon(jump_nlp)
     @test obj(jump_nlp, x0) ≈ obj(exa_model, x0) rtol = 1e-6
     @test grad(jump_nlp, x0) ≈ grad(exa_model, x0) rtol = 1e-6
     @test cons(jump_nlp, x0) ≈ cons(exa_model, x0) rtol = 1e-6
+
+    # Jacobian structure and values (ordering may differ between backends)
+    Jj_r, Jj_c = jac_structure(jump_nlp)
+    Jj_v = jac_coord(jump_nlp, x0)
+    J_jump = sparse(Jj_r, Jj_c, Jj_v, m, n)
+
+    Je_r, Je_c = jac_structure(exa_model)
+    Je_v = jac_coord(exa_model, x0)
+    J_exa = sparse(Je_r, Je_c, Je_v, m, n)
+
+    @test sort(collect(zip(Jj_r, Jj_c))) == sort(collect(zip(Je_r, Je_c)))
+    @test Matrix(J_jump) ≈ Matrix(J_exa) rtol = 1e-6
+
+    # Hessian structure and values (ordering may differ between backends)
+    y0 = ones(m)
+    Hj_r, Hj_c = hess_structure(jump_nlp)
+    Hj_v = hess_coord(jump_nlp, x0, y0)
+    H_jump = Symmetric(sparse(Hj_r, Hj_c, Hj_v, n, n), :L)
+
+    He_r, He_c = hess_structure(exa_model)
+    He_v = hess_coord(exa_model, x0, y0)
+    H_exa = Symmetric(sparse(He_r, He_c, He_v, n, n), :L)
+
+    @test sort(collect(zip(Hj_r, Hj_c))) == sort(collect(zip(He_r, He_c)))
+    @test Matrix(H_jump) ≈ Matrix(H_exa) rtol = 1e-6
 end
