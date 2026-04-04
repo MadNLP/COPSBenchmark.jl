@@ -1,0 +1,3 @@
+[deps]
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+COPSBenchmark = "3c263af4-7bba-497b-afe4-00c59a0a48a5"
