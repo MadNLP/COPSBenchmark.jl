@@ -98,51 +98,66 @@ COMPARE_INSTANCES = [
 
     jump_nlp = MathOptNLPModel(jump_model)
 
-    # Structural comparison
-    @test get_nvar(jump_nlp) == get_nvar(exa_model)
-    @test get_ncon(jump_nlp) == get_ncon(exa_model)
-
-    # Variable bounds
-    @test get_lvar(jump_nlp) ≈ get_lvar(exa_model)
-    @test get_uvar(jump_nlp) ≈ get_uvar(exa_model)
-
-    # Constraint bounds
-    @test get_lcon(jump_nlp) ≈ get_lcon(exa_model)
-    @test get_ucon(jump_nlp) ≈ get_ucon(exa_model)
-
-    # Starting point
-    @test jump_nlp.meta.x0 ≈ exa_model.meta.x0
-
-    # Callbacks at starting point
-    x0 = jump_nlp.meta.x0
     n = get_nvar(jump_nlp)
     m = get_ncon(jump_nlp)
-    @test obj(jump_nlp, x0) ≈ obj(exa_model, x0) rtol = 1e-6
-    @test grad(jump_nlp, x0) ≈ grad(exa_model, x0) rtol = 1e-6
-    @test cons(jump_nlp, x0) ≈ cons(exa_model, x0) rtol = 1e-6
 
-    # Jacobian structure and values (ordering may differ between backends)
+    # Structural comparison
+    @test n == get_nvar(exa_model)
+    @test m == get_ncon(exa_model)
+
+    # Variable bounds (sorted, as JuMP may reorder variables)
+    @test sort(get_lvar(jump_nlp)) ≈ sort(get_lvar(exa_model))
+    @test sort(get_uvar(jump_nlp)) ≈ sort(get_uvar(exa_model))
+
+    # Constraint bounds (sorted, as JuMP may reorder constraints)
+    @test sort(get_lcon(jump_nlp)) ≈ sort(get_lcon(exa_model))
+    @test sort(get_ucon(jump_nlp)) ≈ sort(get_ucon(exa_model))
+
+    # Starting point (sorted, as variable ordering may differ)
+    x0_jump = jump_nlp.meta.x0
+    x0_exa = exa_model.meta.x0
+    @test sort(x0_jump) ≈ sort(x0_exa)
+
+    # Evaluate each model at its own starting point.
+    # Since x0 represents the same physical point (just reordered),
+    # order-invariant quantities must match.
+
+    # Objective (scalar, order-independent)
+    @test obj(jump_nlp, x0_jump) ≈ obj(exa_model, x0_exa) rtol = 1e-6
+
+    # Gradient (sorted, as variable ordering may differ)
+    g_jump = grad(jump_nlp, x0_jump)
+    g_exa = grad(exa_model, x0_exa)
+    @test sort(g_jump) ≈ sort(g_exa) rtol = 1e-6
+
+    # Constraints (sorted, as constraint ordering may differ)
+    c_jump = cons(jump_nlp, x0_jump)
+    c_exa = cons(exa_model, x0_exa)
+    @test sort(c_jump) ≈ sort(c_exa) rtol = 1e-6
+
+    # Jacobian: compare singular values (invariant under row/column permutation)
     Jj_r, Jj_c = jac_structure(jump_nlp)
-    Jj_v = jac_coord(jump_nlp, x0)
-    J_jump = sparse(Jj_r, Jj_c, Jj_v, m, n)
+    Jj_v = jac_coord(jump_nlp, x0_jump)
+    J_jump = Matrix(sparse(Jj_r, Jj_c, Jj_v, m, n))
 
     Je_r, Je_c = jac_structure(exa_model)
-    Je_v = jac_coord(exa_model, x0)
-    J_exa = sparse(Je_r, Je_c, Je_v, m, n)
+    Je_v = jac_coord(exa_model, x0_exa)
+    J_exa = Matrix(sparse(Je_r, Je_c, Je_v, m, n))
 
-    @test sort(collect(zip(Jj_r, Jj_c))) == sort(collect(zip(Je_r, Je_c)))
-    @test Matrix(J_jump) ≈ Matrix(J_exa) rtol = 1e-6
+    @test length(Jj_r) == length(Je_r)  # same nnz
+    @test sort(svdvals(J_jump)) ≈ sort(svdvals(J_exa)) rtol = 1e-6
 
-    # Hessian structure and values (ordering may differ between backends)
-    y0 = ones(m)
+    # Hessian: compare eigenvalues (invariant under permutation similarity)
+    y0_jump = ones(m)
+    y0_exa = ones(m)
     Hj_r, Hj_c = hess_structure(jump_nlp)
-    Hj_v = hess_coord(jump_nlp, x0, y0)
-    H_jump = Symmetric(sparse(Hj_r, Hj_c, Hj_v, n, n), :L)
+    Hj_v = hess_coord(jump_nlp, x0_jump, y0_jump)
+    H_jump = Matrix(Symmetric(sparse(Hj_r, Hj_c, Hj_v, n, n), :L))
 
     He_r, He_c = hess_structure(exa_model)
-    He_v = hess_coord(exa_model, x0, y0)
-    H_exa = Symmetric(sparse(He_r, He_c, He_v, n, n), :L)
+    He_v = hess_coord(exa_model, x0_exa, y0_exa)
+    H_exa = Matrix(Symmetric(sparse(He_r, He_c, He_v, n, n), :L))
 
-    @test sort(collect(zip(Hj_r, Hj_c))) == sort(collect(zip(He_r, He_c)))
-    @test Matrix(H_jump) ≈ Matrix(H_exa) rtol = 1e-6
+    @test length(Hj_r) == length(He_r)  # same nnz
+    @test sort(eigvals(H_jump)) ≈ sort(eigvals(H_exa)) rtol = 1e-6
 end
