@@ -11,6 +11,7 @@ on:
 permissions:
   actions: write
   contents: write
+  pages: write
   statuses: write
 
 jobs:

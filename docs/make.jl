@@ -3,7 +3,6 @@ using COPSBenchmark
 
 makedocs(
     sitename = "COPSBenchmark.jl",
-    modules = [COPSBenchmark],
     format = Documenter.HTML(
         prettyurls = get(ENV, "CI", nothing) == "true",
     ),

@@ -55,9 +55,3 @@ result = ipopt(model; print_level=0)
 | Dirichlet | `dirichlet_model` | `nh` |
 | Henon | `henon_model` | `nh` |
 | Lane-Emden | `lane_emden_model` | `nh` |
-
-## API Reference
-
-```@autodocs
-Modules = [COPSBenchmark]
-```
