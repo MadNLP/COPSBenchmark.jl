@@ -19,7 +19,7 @@ ExaModels = "1037b233-b668-4ce9-9b63-f9f681f55dd2"
 
 [sources.ExaModels]
 url = "https://github.com/exanauts/ExaModels.jl.git"
-rev = "ss/aot"
+rev = "claude/sync-generated-files-upEXG"
 
 [compat]
 JuMP = "^1.19"
