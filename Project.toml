@@ -14,8 +14,9 @@ ExaModels = "1037b233-b668-4ce9-9b63-f9f681f55dd2"
 COPSBenchmarkExaModels = "ExaModels"
 COPSBenchmarkJuMP = "JuMP"
 
-[sources]
-ExaModels = {url = "https://github.com/exanauts/ExaModels.jl.git", rev = "ss/aot"}
+[sources.ExaModels]
+url = "https://github.com/exanauts/ExaModels.jl.git"
+rev = "ss/aot"
 
 [compat]
 JuMP = "^1.19"
