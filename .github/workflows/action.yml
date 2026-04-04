@@ -8,18 +8,18 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+permissions:
+  actions: write
+  contents: read
+
 jobs:
-  test-github:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-          os: [ubuntu-22.04]
-          julia-version: ['1']
-          julia-arch: [x64]
+  test:
+    runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v3
-      - uses: julia-actions/setup-julia@latest
+      - uses: actions/checkout@v2
+      - uses: julia-actions/install-juliaup@v2
         with:
-          version: ${{ matrix.julia-version }}
+          channel: '1'
+      - uses: julia-actions/cache@v1
       - uses: julia-actions/julia-buildpkg@latest
       - uses: julia-actions/julia-runtest@latest
