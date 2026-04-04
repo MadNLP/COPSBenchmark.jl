@@ -11,30 +11,32 @@ using LinearAlgebra
 using Random
 using COPSBenchmark
 
+# Reference values from http://www.mcs.anl.gov/~more/cops/cops3.pdf
+# Sizes reduced where possible; rtol=1e-4 requires sufficient discretization.
 COPS_INSTANCES = [
-    (COPSBenchmark.bearing_model, (10, 10), -1.5482e-1),
-    (COPSBenchmark.chain_model, (200,), 5.06891),
-    (COPSBenchmark.camshape_model, (200,), 4.2791), # TODO: result is slightly different
+    (COPSBenchmark.bearing_model, (50, 50), -1.5482e-1),
+    (COPSBenchmark.chain_model, (800,), 5.06891),
+    (COPSBenchmark.camshape_model, (200,), 4.2791),
     (COPSBenchmark.catmix_model, (100,), -4.80556e-2),
     (COPSBenchmark.channel_model, (100,), 1.0),
     (COPSBenchmark.elec_model, (50,), 1.0552e3),
     (COPSBenchmark.gasoil_model, (100,), 5.2366e-3),
-    (COPSBenchmark.glider_model, (50,), -1.25505e3),
+    (COPSBenchmark.glider_model, (100,), -1.25505e3),
     (COPSBenchmark.marine_model, (100,), 1.97462e7),
     (COPSBenchmark.methanol_model, (100,), 9.02229e-3),
-    (COPSBenchmark.minsurf_model, (20, 20), 2.51488),
+    (COPSBenchmark.minsurf_model, (50, 50), 2.51488),
     (COPSBenchmark.pinene_model, (100,), 1.98721e1),
-    (COPSBenchmark.polygon_model, (100,), -0.674981), # N.B: objective depends on the optimizer used.
-    (COPSBenchmark.robot_model, (100,), 9.14138),
-    (COPSBenchmark.rocket_model, (200,), 1.01283),
-    (COPSBenchmark.steering_model, (100,), 5.54577e-1),
+    (COPSBenchmark.polygon_model, (100,), -0.674981),
+    (COPSBenchmark.robot_model, (200,), 9.14138),
+    (COPSBenchmark.rocket_model, (400,), 1.01283),
+    (COPSBenchmark.steering_model, (200,), 5.54577e-1),
     (COPSBenchmark.tetra_duct15_model, (), 1.04951e4),
     (COPSBenchmark.tetra_duct20_model, (), 4.82685e3),
     (COPSBenchmark.tetra_gear_model, (), 4.15163e3),
-    (COPSBenchmark.torsion_model, (20, 20), -4.18087e-1),
+    (COPSBenchmark.torsion_model, (50, 50), -4.18087e-1),
     (COPSBenchmark.dirichlet_model, (20,), 1.71464e-2),
     # N.B.: comment henon and lane-emden as they take too long in the CI.
-    # (COPSBenchmark.henon_model, (10,), 6.667736), # N.B: objective depends on the optimizer used.
+    # (COPSBenchmark.henon_model, (10,), 6.667736),
     # (COPSBenchmark.lane_emden_model, (20,), 9.11000),
     (COPSBenchmark.triangle_pacman_model, (), 1.25045e3),
 ]
