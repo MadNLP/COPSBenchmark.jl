@@ -32,7 +32,7 @@ function COPSBenchmark.robot_model(nh, ::ExaModelsBackend; T = Float64, backend 
     u_the = ExaModels.variable(core, nh+1; start=0.0, lvar = -max_u_the, uvar = max_u_the)
     u_phi = ExaModels.variable(core, nh+1; start=0.0, lvar = -max_u_phi, uvar = max_u_phi)
     # Steps and final time
-    step = ExaModels.variable(core, lvar = 0.0)
+    step = ExaModels.variable(core, lvar = 0.0, start = 1.0 / nh)
     # The moments of inertia
     I_the = ExaModels.variable(core, nh+1; start=((L-rho0)^3+rho0^3)*(sin(phi0))^2/3.0)
     I_phi = ExaModels.variable(core, nh+1; start=((L-rho0)^3+rho0^3)/3.0)
