@@ -22,11 +22,11 @@
     ExaModels.@con(c, c2, r[N])
 
     # Impose ordering on angles: θ[i+1] >= θ[i]
-    ExaModels.@con(c, c3, θ[i+1] - θ[i] for i in 1:N-1; lcon = 0.0)
+    ExaModels.@con(c, c3, θ[i+1] - θ[i] for i in 1:N-1; lcon = 0.0, ucon = Inf)
 
     # Diameter constraint: r[i]^2 + r[j]^2 - 2*r[i]*r[j]*cos(θ[i]-θ[j]) <= 1
     pairs = [(i, j) for i in 1:N-1 for j in i+1:N]
-    ExaModels.@con(c, c4, r[i]^2 + r[j]^2 - 2*r[i]*r[j]*cos(θ[i] - θ[j]) - 1 for (i, j) in pairs; ucon = 0.0)
+    ExaModels.@con(c, c4, r[i]^2 + r[j]^2 - 2*r[i]*r[j]*cos(θ[i] - θ[j]) - 1 for (i, j) in pairs; lcon = -Inf, ucon = 0.0)
 
     return ExaModels.ExaModel(c; kwargs...)
 end

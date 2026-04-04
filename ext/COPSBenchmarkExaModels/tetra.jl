@@ -56,7 +56,7 @@ function _tetra_model_exa(x0, TETS::Vector{Int64}, Const::Vector{Int64}; T = Flo
         (x[t1+N] - x[t0+N]) * ((x[t2+2*N] - x[t0+2*N])*(x[t3] - x[t0]) - (x[t2] - x[t0])*(x[t3+2*N] - x[t0+2*N])) * sqrt(2) +
         (x[t1+2*N] - x[t0+2*N]) * ((x[t2] - x[t0])*(x[t3+N] - x[t0+N]) - (x[t2+N] - x[t0+N])*(x[t3] - x[t0])) * sqrt(2)
         for (e, t0, t1, t2, t3) in itr;
-        lcon = τ
+        lcon = τ, ucon = Inf
     )
 
     return ExaModels.ExaModel(c; kwargs...)

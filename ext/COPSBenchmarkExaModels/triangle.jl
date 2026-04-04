@@ -43,7 +43,7 @@ function _triangle_model_exa(x0, TRIS::Vector{Int64}, Const::Vector{Int64}; T = 
     ExaModels.@con(c, c1,
         2 * ((x[t1]-x[t0])*(x[t2+N]-x[t0+N]) - (x[t2]-x[t0])*(x[t1+N]-x[t0+N])) / sqrt(3)
         for (e, t0, t1, t2) in itr;
-        lcon = τ
+        lcon = τ, ucon = Inf
     )
 
     return ExaModels.ExaModel(c; kwargs...)
