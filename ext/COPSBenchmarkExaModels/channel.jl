@@ -88,8 +88,8 @@ function COPSBenchmark.channel_model(::ExaModelsBackend, nh; T = Float64, backen
     ExaModels.@var(core, uc, nh, nc, nd; start = uc0)
     ExaModels.@var(core, Duc, nh, nc, nd; start = 0.0)
 
-    # Constant objective (use 0 * first variable to make ExaModels happy)
-    ExaModels.@obj(core, zero(T) * v[1, 1] + one(T) for _i in 1:1)
+    # Constant objective
+    ExaModels.@obj(core, one(T) for _i in 1:1)
 
     # con1: uc[i,j,s] - v[i,s] - h * sum(w[i,k] * rho[j]^k / k!)
     ExaModels.@con(core, c1,
