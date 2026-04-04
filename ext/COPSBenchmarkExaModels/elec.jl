@@ -4,7 +4,7 @@
 # COPS 3.0 - November 2002
 # COPS 3.1 - March 2004
 
-function COPSBenchmark.elec_model(::ExaModelsBackend, np; seed = 2713, T = Float64, backend = nothing, kwargs...)
+@inline function COPSBenchmark.elec_model(::ExaModelsBackend, np; seed = 2713, T = Float64, backend = nothing, kwargs...)
     Random.seed!(seed)
 
     # Set the starting point to a quasi-uniform distribution
