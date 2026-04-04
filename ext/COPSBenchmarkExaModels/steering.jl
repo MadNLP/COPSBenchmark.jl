@@ -27,10 +27,11 @@
 
     ExaModels.@var(core, u, 1:nh+1; lvar = u_min, uvar =  u_max, start=0.0)   # control
     ExaModels.@var(core, x, 1:nh+1, 1:4; start=[gen_x0(i, j) for i=1:nh+1, j=1:4])     # state
-    ExaModels.@var(core, tf, 1; start=1.0, lvar=0.0)                 # final time
+    ExaModels.@var(core, tf, 1; start=1.0)                 # final time
 
     ExaModels.@obj(core, tf[1])
 
+    ExaModels.@con(core, c0, tf[1]; lcon = 0., ucon= Inf)
     # Dynamics
     ExaModels.@con(core, c1, -x[i+1,1] + x[i,1] + 0.5*(tf[1] / nh)*(x[i,3] + x[i+1,3]) for i=1:nh)
     ExaModels.@con(core, c2, -x[i+1,2] + x[i,2] + 0.5*(tf[1] / nh)*(x[i,4] + x[i+1,4]) for i=1:nh)
