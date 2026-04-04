@@ -21,6 +21,9 @@ include("rocket.jl")
 include("steering.jl")
 include("channel.jl")
 include("torsion.jl")
+include("polygon.jl")
+include("triangle.jl")
+include("tetra.jl")
 include("pde_models.jl")
 
 end

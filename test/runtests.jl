@@ -8,6 +8,7 @@ using NLPModelsIpopt
 using NLPModelsJuMP
 using SparseArrays
 using LinearAlgebra
+using Random
 using COPSBenchmark
 
 COPS_INSTANCES = [
@@ -90,11 +91,37 @@ COMPARE_INSTANCES = [
     (COPSBenchmark.methanol_model, (10,)),
     (COPSBenchmark.minsurf_model, (10, 10)),
     (COPSBenchmark.pinene_model, (10,)),
+    (COPSBenchmark.polygon_model, (50,)),
     (COPSBenchmark.robot_model, (20,)),
     (COPSBenchmark.rocket_model, (50,)),
     (COPSBenchmark.steering_model, (50,)),
     (COPSBenchmark.torsion_model, (10, 10)),
 ]
+
+# Find the permutation P such that keys_a[P] ≈ keys_b.
+# This recovers the variable/constraint reordering done by JuMP.
+function find_permutation(keys_a, keys_b)
+    perm_a = sortperm(keys_a)
+    perm_b = sortperm(keys_b)
+    P = similar(perm_a)
+    for i in eachindex(perm_a)
+        P[perm_b[i]] = perm_a[i]
+    end
+    return P
+end
+
+# Generate a random point within [lvar, uvar], perturbed from x0.
+function perturb_x0(x0, lvar, uvar; rng = Random.default_rng(), scale = 0.1)
+    x = copy(x0)
+    for i in eachindex(x)
+        lo = max(lvar[i], x0[i] - scale * max(abs(x0[i]), 1.0))
+        hi = min(uvar[i], x0[i] + scale * max(abs(x0[i]), 1.0))
+        if isfinite(lo) && isfinite(hi) && lo < hi
+            x[i] = lo + (hi - lo) * rand(rng)
+        end
+    end
+    return x
+end
 
 @testset "Compare callbacks: $instance" for (instance, params) in COMPARE_INSTANCES
     jump_model = instance(COPSBenchmark.JuMPBackend(), params...)
@@ -109,62 +136,69 @@ COMPARE_INSTANCES = [
     @test n == get_nvar(exa_model)
     @test m == get_ncon(exa_model)
 
-    # Variable bounds (sorted, as JuMP may reorder variables)
-    @test sort(get_lvar(jump_nlp)) ≈ sort(get_lvar(exa_model))
-    @test sort(get_uvar(jump_nlp)) ≈ sort(get_uvar(exa_model))
+    # Find variable permutation by matching (lvar, uvar, x0) tuples
+    lj, uj, x0j = get_lvar(jump_nlp), get_uvar(jump_nlp), jump_nlp.meta.x0
+    le, ue, x0e = get_lvar(exa_model), get_uvar(exa_model), exa_model.meta.x0
+    var_keys_j = collect(zip(lj, uj, x0j))
+    var_keys_e = collect(zip(le, ue, x0e))
+    Pv = find_permutation(var_keys_j, var_keys_e)
 
-    # Constraint bounds (sorted, as JuMP may reorder constraints)
-    @test sort(get_lcon(jump_nlp)) ≈ sort(get_lcon(exa_model))
-    @test sort(get_ucon(jump_nlp)) ≈ sort(get_ucon(exa_model))
+    # Variable bounds and starting point (element-wise via permutation)
+    @test lj[Pv] ≈ le
+    @test uj[Pv] ≈ ue
+    @test x0j[Pv] ≈ x0e
 
-    # Starting point (sorted, as variable ordering may differ)
-    x0_jump = jump_nlp.meta.x0
-    x0_exa = exa_model.meta.x0
-    @test sort(x0_jump) ≈ sort(x0_exa)
+    # Find constraint permutation by matching (lcon, ucon) tuples
+    lcj, ucj = get_lcon(jump_nlp), get_ucon(jump_nlp)
+    lce, uce = get_lcon(exa_model), get_ucon(exa_model)
 
-    # Evaluate each model at its own starting point.
-    # Since x0 represents the same physical point (just reordered),
-    # order-invariant quantities must match.
+    # Evaluate cons at x0 to disambiguate constraints with identical bounds
+    cj0 = cons(jump_nlp, x0j)
+    ce0 = cons(exa_model, x0e)
+    con_keys_j = collect(zip(lcj, ucj, cj0))
+    con_keys_e = collect(zip(lce, uce, ce0))
+    Pc = find_permutation(con_keys_j, con_keys_e)
 
-    # Objective (scalar, order-independent)
-    @test obj(jump_nlp, x0_jump) ≈ obj(exa_model, x0_exa) rtol = 1e-6
+    @test lcj[Pc] ≈ lce
+    @test ucj[Pc] ≈ uce
 
-    # Gradient (sorted, as variable ordering may differ)
-    g_jump = grad(jump_nlp, x0_jump)
-    g_exa = grad(exa_model, x0_exa)
-    @test sort(g_jump) ≈ sort(g_exa) rtol = 1e-6
+    # --- Test callbacks at starting point ---
+    @test obj(jump_nlp, x0j) ≈ obj(exa_model, x0e) rtol = 1e-6
+    @test grad(jump_nlp, x0j)[Pv] ≈ grad(exa_model, x0e) rtol = 1e-6
+    @test cj0[Pc] ≈ ce0 rtol = 1e-6
 
-    # Constraints (sorted, as constraint ordering may differ)
-    c_jump = cons(jump_nlp, x0_jump)
-    c_exa = cons(exa_model, x0_exa)
-    @test sort(c_jump) ≈ sort(c_exa) rtol = 1e-6
-
-    # Jacobian: compare singular values (invariant under row/column permutation)
+    # Jacobian (apply row/column permutation)
     Jj_r, Jj_c = jac_structure(jump_nlp)
-    Jj_v = jac_coord(jump_nlp, x0_jump)
+    Jj_v = jac_coord(jump_nlp, x0j)
     J_jump = Matrix(sparse(Jj_r, Jj_c, Jj_v, m, n))
 
     Je_r, Je_c = jac_structure(exa_model)
-    Je_v = jac_coord(exa_model, x0_exa)
+    Je_v = jac_coord(exa_model, x0e)
     J_exa = Matrix(sparse(Je_r, Je_c, Je_v, m, n))
 
-    σ_jump = sort(svdvals(J_jump))
-    σ_exa = sort(svdvals(J_exa))
-    @test σ_jump ≈ σ_exa atol = 1e-6
+    @test J_jump[Pc, Pv] ≈ J_exa atol = 1e-6
 
-    # Hessian: compare eigenvalues (invariant under permutation similarity).
-    # y = ones(m) weights all constraints equally, so result is
-    # independent of constraint ordering.
+    # Hessian (apply variable permutation to both rows and columns)
     y0 = ones(m)
     Hj_r, Hj_c = hess_structure(jump_nlp)
-    Hj_v = hess_coord(jump_nlp, x0_jump; y = y0)
+    Hj_v = hess_coord(jump_nlp, x0j; y = y0)
     H_jump = Matrix(Symmetric(sparse(Hj_r, Hj_c, Hj_v, n, n), :L))
 
     He_r, He_c = hess_structure(exa_model)
-    He_v = hess_coord(exa_model, x0_exa; y = y0)
+    He_v = hess_coord(exa_model, x0e; y = y0)
     H_exa = Matrix(Symmetric(sparse(He_r, He_c, He_v, n, n), :L))
 
-    λ_jump = sort(eigvals(H_jump))
-    λ_exa = sort(eigvals(H_exa))
-    @test λ_jump ≈ λ_exa atol = 1e-6
+    @test H_jump[Pv, Pv] ≈ H_exa atol = 1e-6
+
+    # --- Test callbacks at perturbed points ---
+    Random.seed!(42)
+    for _ in 1:3
+        xp_exa = perturb_x0(x0e, le, ue)
+        xp_jump = similar(x0j)
+        xp_jump[Pv] = xp_exa  # map back to JuMP ordering
+
+        @test obj(jump_nlp, xp_jump) ≈ obj(exa_model, xp_exa) rtol = 1e-6
+        @test grad(jump_nlp, xp_jump)[Pv] ≈ grad(exa_model, xp_exa) rtol = 1e-6
+        @test cons(jump_nlp, xp_jump)[Pc] ≈ cons(exa_model, xp_exa) rtol = 1e-6
+    end
 end
