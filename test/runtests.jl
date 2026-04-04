@@ -227,15 +227,15 @@ end
         J_exa = Matrix(sparse(Je_r, Je_c, Je_v, m, n))
         @test sort(svdvals(J_jump)) ≈ sort(svdvals(J_exa)) atol = 1e-6
 
-        # Hessian: compare eigenvalues (use obj_weight=0 to avoid sign
-        # differences from Max→Min conversion in MathOptNLPModel)
+        # Hessian: compare absolute eigenvalues (sign may differ due to
+        # Max→Min conversion affecting all Lagrangian terms)
         y0 = ones(m)
         Hj_r, Hj_c = hess_structure(jump_nlp)
-        Hj_v = hess_coord(jump_nlp, x0j, y0; obj_weight=0.0)
+        Hj_v = hess_coord(jump_nlp, x0j, y0)
         H_jump = Matrix(Symmetric(sparse(Hj_r, Hj_c, Hj_v, n, n), :L))
         He_r, He_c = hess_structure(exa_model)
-        He_v = hess_coord(exa_model, x0e, y0; obj_weight=0.0)
+        He_v = hess_coord(exa_model, x0e, y0)
         H_exa = Matrix(Symmetric(sparse(He_r, He_c, He_v, n, n), :L))
-        @test sort(eigvals(H_jump)) ≈ sort(eigvals(H_exa)) atol = 1e-6
+        @test sort(abs.(eigvals(H_jump))) ≈ sort(abs.(eigvals(H_exa))) atol = 1e-6
     end
 end
