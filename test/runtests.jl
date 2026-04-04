@@ -181,11 +181,11 @@ end
     # Hessian (apply variable permutation to both rows and columns)
     y0 = ones(m)
     Hj_r, Hj_c = hess_structure(jump_nlp)
-    Hj_v = hess_coord(jump_nlp, x0j; y = y0)
+    Hj_v = hess_coord(jump_nlp, x0j, y0)
     H_jump = Matrix(Symmetric(sparse(Hj_r, Hj_c, Hj_v, n, n), :L))
 
     He_r, He_c = hess_structure(exa_model)
-    He_v = hess_coord(exa_model, x0e; y = y0)
+    He_v = hess_coord(exa_model, x0e, y0)
     H_exa = Matrix(Symmetric(sparse(He_r, He_c, He_v, n, n), :L))
 
     @test H_jump[Pv, Pv] ≈ H_exa atol = 1e-6
