@@ -1,5 +1,5 @@
 
-function COPSBenchmark.transition_state_model(::JuMPBackend, problem, dom::COPSBenchmark.PDEDiscretizationDomain)
+function COPSBenchmark.transition_state_model(::JuMPBackend, problem, dom::COPSBenchmark.PDEDiscretizationDomain; kwargs...)
     a, b, c, d, p = problem.a, problem.b, problem.c, problem.d, problem.p
     x0 = COPSBenchmark._initial_position!(problem, dom, 10)
 
