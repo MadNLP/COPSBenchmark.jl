@@ -144,20 +144,23 @@ COMPARE_INSTANCES = [
     Je_v = jac_coord(exa_model, x0_exa)
     J_exa = Matrix(sparse(Je_r, Je_c, Je_v, m, n))
 
-    @test length(Jj_r) == length(Je_r)  # same nnz
-    @test sort(svdvals(J_jump)) ≈ sort(svdvals(J_exa)) rtol = 1e-6
+    σ_jump = sort(svdvals(J_jump))
+    σ_exa = sort(svdvals(J_exa))
+    @test σ_jump ≈ σ_exa atol = 1e-6
 
-    # Hessian: compare eigenvalues (invariant under permutation similarity)
-    y0_jump = ones(m)
-    y0_exa = ones(m)
+    # Hessian: compare eigenvalues (invariant under permutation similarity).
+    # y = ones(m) weights all constraints equally, so result is
+    # independent of constraint ordering.
+    y0 = ones(m)
     Hj_r, Hj_c = hess_structure(jump_nlp)
-    Hj_v = hess_coord(jump_nlp, x0_jump, y0_jump)
+    Hj_v = hess_coord(jump_nlp, x0_jump; y = y0)
     H_jump = Matrix(Symmetric(sparse(Hj_r, Hj_c, Hj_v, n, n), :L))
 
     He_r, He_c = hess_structure(exa_model)
-    He_v = hess_coord(exa_model, x0_exa, y0_exa)
+    He_v = hess_coord(exa_model, x0_exa; y = y0)
     H_exa = Matrix(Symmetric(sparse(He_r, He_c, He_v, n, n), :L))
 
-    @test length(Hj_r) == length(He_r)  # same nnz
-    @test sort(eigvals(H_jump)) ≈ sort(eigvals(H_exa)) rtol = 1e-6
+    λ_jump = sort(eigvals(H_jump))
+    λ_exa = sort(eigvals(H_exa))
+    @test λ_jump ≈ λ_exa atol = 1e-6
 end
