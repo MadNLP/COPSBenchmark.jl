@@ -27,7 +27,59 @@ function COPSBenchmark.channel_model(::ExaModelsBackend, nh; T = Float64, backen
     uc0 = T[v0[i, s] for i in 1:nh, j in 1:nc, s in 1:nd]
 
     # fac[k+1] = k!
-    fac = [factorial(k) for k in 0:nc+nd]
+    fac = T[factorial(k) for k in 0:nc+nd]
+
+    # Precompute all coefficients for the collocation constraints
+    # con1: uc[i,j,s] = v[i,s] + h * sum_{k=1}^{nc}(w[i,k] * rho[j]^k / k!)
+    con1_itr = [
+        (i, j, s, h*rho[j]^1/fac[2], h*rho[j]^2/fac[3], h*rho[j]^3/fac[4], h*rho[j]^4/fac[5])
+        for i in 1:nh, j in 1:nc, s in 1:nd
+    ]
+
+    # con2: Duc[i,j,s] coefficients depend on (j,s)
+    con2_itr = [
+        (i, j, s,
+         # v coefficients: (rho[j]*h)^(k-s) / (k-s)! for k = s:nd (padded to length 4)
+         (s <= 1 ? (rho[j]*h)^(1-s)/fac[1-s+1] : zero(T)),
+         (s <= 2 ? (rho[j]*h)^(2-s)/fac[2-s+1] : zero(T)),
+         (s <= 3 ? (rho[j]*h)^(3-s)/fac[3-s+1] : zero(T)),
+         (s <= 4 ? (rho[j]*h)^(4-s)/fac[4-s+1] : zero(T)),
+         # w coefficients: h^(nd-s+1) * rho[j]^(k+nd-s) / (k+nd-s)! for k = 1:nc
+         h^(nd-s+1)*rho[j]^(1+nd-s)/fac[1+nd-s+1],
+         h^(nd-s+1)*rho[j]^(2+nd-s)/fac[2+nd-s+1],
+         h^(nd-s+1)*rho[j]^(3+nd-s)/fac[3+nd-s+1],
+         h^(nd-s+1)*rho[j]^(4+nd-s)/fac[4+nd-s+1])
+        for i in 1:nh, j in 1:nc, s in 1:nd
+    ]
+
+    # continuity coefficients: depend on s
+    cont_itr = [
+        (i, s,
+         # v coefficients
+         (s <= 1 ? h^(1-s)/fac[1-s+1] : zero(T)),
+         (s <= 2 ? h^(2-s)/fac[2-s+1] : zero(T)),
+         (s <= 3 ? h^(3-s)/fac[3-s+1] : zero(T)),
+         (s <= 4 ? h^(4-s)/fac[4-s+1] : zero(T)),
+         # w coefficients
+         h^(nd-s+1)/fac[1+nd-s+1],
+         h^(nd-s+1)/fac[2+nd-s+1],
+         h^(nd-s+1)/fac[3+nd-s+1],
+         h^(nd-s+1)/fac[4+nd-s+1])
+        for i in 1:nh-1, s in 1:nd
+    ]
+
+    # collocation physics coefficients: depend on j
+    coll_itr = [
+        (i, j,
+         rho[j]^0/fac[1], rho[j]^1/fac[2], rho[j]^2/fac[3], rho[j]^3/fac[4])
+        for i in 1:nh, j in 1:nc
+    ]
+
+    # right BC coefficients
+    bc3_cv = [h^(k-1)/fac[k] for k in 1:nd]
+    bc3_cw = [h^nd/fac[k+nd] for k in 1:nc]
+    bc4_cv = [h^(k-2)/fac[k-1] for k in 2:nd]
+    bc4_cw = [h^(nd-1)/fac[k+nd-1] for k in 1:nc]
 
     core = ExaModels.ExaCore(T; backend = backend)
 
@@ -36,85 +88,49 @@ function COPSBenchmark.channel_model(::ExaModelsBackend, nh; T = Float64, backen
     ExaModels.@var(core, uc, nh, nc, nd; start = uc0)
     ExaModels.@var(core, Duc, nh, nc, nd; start = 0.0)
 
-    # con1: uc[i,j,s] = v[i,s] + h * sum_{k=1}^{nc}(w[i,k] * rho[j]^k / k!)
-    # Expand over j so rho[j] is a concrete constant per pattern
-    for j_val in 1:nc
-        rho_j = rho[j_val]
-        A = [rho_j^k / fac[k+1] for k in 1:nc]  # A[k] = rho_j^k / k!
-        ExaModels.@con(
-            core,
-            uc[i, j_val, s] - v[i, s] - h * (w[i,1]*A[1] + w[i,2]*A[2] + w[i,3]*A[3] + w[i,4]*A[4])
-            for i in 1:nh, s in 1:nd
-        )
-    end
+    # Constant objective
+    ExaModels.@obj(core, one(T) for _i in 1:1)
 
-    # con2: Duc[i,j,s] = sum_{k=s}^{nd}(v[i,k]*(rho[j]*h)^(k-s)/(k-s)!)
-    #                  + h^(nd-s+1) * sum_{k=1}^{nc}(w[i,k]*rho[j]^(k+nd-s)/(k+nd-s)!)
-    # Expand over j and s so all coefficients are concrete
-    for j_val in 1:nc, s_val in 1:nd
-        rho_j = rho[j_val]
-        # v_coefs[m] for k = s_val+m-1, m in 1:nd-s_val+1
-        Bv = [(rho_j * h)^(k - s_val) / fac[k - s_val + 1] for k in s_val:nd]
-        # w_coefs[k] for k in 1:nc
-        Bw = [h^(nd - s_val + 1) * rho_j^(k + nd - s_val) / fac[k + nd - s_val + 1] for k in 1:nc]
-        ExaModels.@con(
-            core,
-            Duc[i, j_val, s_val]
-            - sum(v[i, k] * Bv[k - s_val + 1] for k in s_val:nd)
-            - (Bw[1]*w[i,1] + Bw[2]*w[i,2] + Bw[3]*w[i,3] + Bw[4]*w[i,4])
-            for i in 1:nh
-        )
-    end
+    # con1: uc[i,j,s] - v[i,s] - h * sum(w[i,k] * rho[j]^k / k!)
+    ExaModels.@con(core, c1,
+        uc[i, j, s] - v[i, s] - (a1*w[i,1] + a2*w[i,2] + a3*w[i,3] + a4*w[i,4])
+        for (i, j, s, a1, a2, a3, a4) in con1_itr
+    )
+
+    # con2: Duc[i,j,s] - sum(v[i,k]*Bv[k]) - sum(w[i,k]*Bw[k])
+    ExaModels.@con(core, c2,
+        Duc[i, j, s] - (bv1*v[i,1] + bv2*v[i,2] + bv3*v[i,3] + bv4*v[i,4])
+                     - (bw1*w[i,1] + bw2*w[i,2] + bw3*w[i,3] + bw4*w[i,4])
+        for (i, j, s, bv1, bv2, bv3, bv4, bw1, bw2, bw3, bw4) in con2_itr
+    )
 
     # Boundary conditions
     ExaModels.@con(core, bc1, v[1, 1] - bc[1, 1])
     ExaModels.@con(core, bc2, v[1, 2] - bc[2, 1])
 
-    # Right boundary: sum_{k=1}^{nd}(v[nh,k]*h^(k-1)/(k-1)!) + h^nd*sum_{k=1}^{nc}(w[nh,k]/(k+nd-1)!) = bc[1,2]
-    let Cv = [h^(k-1) / fac[k] for k in 1:nd],
-        Cw = [h^nd / fac[k+nd] for k in 1:nc]
-        ExaModels.@con(
-            core, bc3,
-            sum(v[nh, k] * Cv[k] for k in 1:nd) +
-            (Cw[1]*w[nh,1] + Cw[2]*w[nh,2] + Cw[3]*w[nh,3] + Cw[4]*w[nh,4]) - bc[1, 2]
-        )
-    end
+    ExaModels.@con(core, bc3,
+        bc3_cv[1]*v[nh,1] + bc3_cv[2]*v[nh,2] + bc3_cv[3]*v[nh,3] + bc3_cv[4]*v[nh,4] +
+        bc3_cw[1]*w[nh,1] + bc3_cw[2]*w[nh,2] + bc3_cw[3]*w[nh,3] + bc3_cw[4]*w[nh,4] - bc[1, 2]
+    )
 
-    # Right boundary: sum_{k=2}^{nd}(v[nh,k]*h^(k-2)/(k-2)!) + h^(nd-1)*sum_{k=1}^{nc}(w[nh,k]/(k+nd-2)!) = bc[2,2]
-    let Cv = [h^(k-2) / fac[k-1] for k in 2:nd],
-        Cw = [h^(nd-1) / fac[k+nd-1] for k in 1:nc]
-        ExaModels.@con(
-            core, bc4,
-            sum(v[nh, k] * Cv[k-1] for k in 2:nd) +
-            (Cw[1]*w[nh,1] + Cw[2]*w[nh,2] + Cw[3]*w[nh,3] + Cw[4]*w[nh,4]) - bc[2, 2]
-        )
-    end
+    ExaModels.@con(core, bc4,
+        bc4_cv[1]*v[nh,2] + bc4_cv[2]*v[nh,3] + bc4_cv[3]*v[nh,4] +
+        bc4_cw[1]*w[nh,1] + bc4_cw[2]*w[nh,2] + bc4_cw[3]*w[nh,3] + bc4_cw[4]*w[nh,4] - bc[2, 2]
+    )
 
-    # Continuity: sum_{k=s}^{nd}(v[i,k]*h^(k-s)/(k-s)!) + h^(nd-s+1)*sum_{k=1}^{nc}(w[i,k]/(k+nd-s)!) = v[i+1,s]
-    # Expand over s so coefficients are concrete
-    for s_val in 1:nd
-        Dv = [h^(k - s_val) / fac[k - s_val + 1] for k in s_val:nd]
-        Dw = [h^(nd - s_val + 1) / fac[k + nd - s_val + 1] for k in 1:nc]
-        ExaModels.@con(
-            core,
-            sum(v[i, k] * Dv[k - s_val + 1] for k in s_val:nd) +
-            (Dw[1]*w[i,1] + Dw[2]*w[i,2] + Dw[3]*w[i,3] + Dw[4]*w[i,4]) - v[i+1, s_val]
-            for i in 1:nh-1
-        )
-    end
+    # Continuity
+    ExaModels.@con(core, c3,
+        cv1*v[i,1] + cv2*v[i,2] + cv3*v[i,3] + cv4*v[i,4] +
+        cw1*w[i,1] + cw2*w[i,2] + cw3*w[i,3] + cw4*w[i,4] - v[i+1, s]
+        for (i, s, cv1, cv2, cv3, cv4, cw1, cw2, cw3, cw4) in cont_itr
+    )
 
-    # Collocation physics: sum_{k=1}^{nc}(w[i,k]*rho[j]^(k-1)/(k-1)!) = R*(Duc[i,j,2]*Duc[i,j,3] - Duc[i,j,1]*Duc[i,j,4])
-    # Expand over j so rho[j] is concrete
-    for j_val in 1:nc
-        rho_j = rho[j_val]
-        E = [rho_j^(k-1) / fac[k] for k in 1:nc]  # E[k] = rho_j^(k-1) / (k-1)!
-        ExaModels.@con(
-            core,
-            (E[1]*w[i,1] + E[2]*w[i,2] + E[3]*w[i,3] + E[4]*w[i,4]) -
-            R * (Duc[i, j_val, 2] * Duc[i, j_val, 3] - Duc[i, j_val, 1] * Duc[i, j_val, 4])
-            for i in 1:nh
-        )
-    end
+    # Collocation physics
+    ExaModels.@con(core, c4,
+        e1*w[i,1] + e2*w[i,2] + e3*w[i,3] + e4*w[i,4] -
+        R * (Duc[i, j, 2] * Duc[i, j, 3] - Duc[i, j, 1] * Duc[i, j, 4])
+        for (i, j, e1, e2, e3, e4) in coll_itr
+    )
 
     return ExaModels.ExaModel(core; kwargs...)
 end
