@@ -44,6 +44,7 @@ COPS_INSTANCES = [
 function solve_backend(model, ::COPSBenchmark.JuMPBackend)
     JuMP.set_optimizer(model, Ipopt.Optimizer)
     JuMP.set_silent(model)
+    JuMP.set_attribute(model, "max_iter", 500)
     JuMP.optimize!(model)
     status = JuMP.termination_status(model) == MOI.LOCALLY_SOLVED
     obj_val = JuMP.objective_value(model)
@@ -51,7 +52,7 @@ function solve_backend(model, ::COPSBenchmark.JuMPBackend)
 end
 
 function solve_backend(model, ::COPSBenchmark.ExaModelsBackend)
-    results = ipopt(model; print_level=0, tol=1e-8)
+    results = ipopt(model; print_level=0, tol=1e-8, max_iter=500)
     status = results.status == :first_order
     obj_val = results.objective
     return status, obj_val
