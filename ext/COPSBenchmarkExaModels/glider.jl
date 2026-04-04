@@ -39,7 +39,9 @@ function COPSBenchmark.glider_model(nh, ::ExaModelsBackend; T = Float64, backend
 
     c = ExaModels.ExaCore(T; backend = backend)
 
-    t_f = ExaModels.variable(c, 1; lvar = 0.0, start = 1.0)
+    # N.B.: lvar = 0.1 (not 0.0 as in JuMP) to avoid numerical issues
+    # with lifted variables when t_f is near zero.
+    t_f = ExaModels.variable(c, 1; lvar = 0.1, start = 1.0)
     x = ExaModels.variable(c, nh+1; lvar = zeros(nh+1), start = x0)
     y = ExaModels.variable(c, nh+1; start = [y_0 + (k/nh)*(y_f - y_0) for k in 0:nh])
     vx = ExaModels.variable(c, nh+1; lvar = zeros(nh+1), start = fill(vx_0, nh+1))
