@@ -35,19 +35,18 @@
     ExaModels.@var(core, tf, 1; start = 1.0, lvar = 0.0)
 
     # Expressions (matching JuMP @expressions)
-    ExaModels.@expr(core, step, tf[1] / nh)
     ExaModels.@expr(core, I_the, ((L-rho[i])^3+rho[i]^3)*(sin(phi[i]))^2/3.0 for i=1:nh+1)
     ExaModels.@expr(core, I_phi, ((L-rho[i])^3+rho[i]^3)/3.0 for i=1:nh+1)
 
-    ExaModels.@obj(core, tf[1])
+    ExaModels.@obj(core, tf[1] for i=1:1)
 
     # Dynamics
-    ExaModels.@con(core, c1, - rho[j] + rho[j-1] + 0.5 * step * (rho_dot[j] + rho_dot[j-1]) for j=2:nh+1)
-    ExaModels.@con(core, c2, - phi[j] + phi[j-1] + 0.5 * step * (phi_dot[j] + phi_dot[j-1]) for j=2:nh+1)
-    ExaModels.@con(core, c3, - the[j] + the[j-1] + 0.5 * step * (the_dot[j] + the_dot[j-1]) for j=2:nh+1)
-    ExaModels.@con(core, c4, - rho_dot[j] + rho_dot[j-1] + 0.5 * step * (u_rho[j] + u_rho[j-1]) / L for j=2:nh+1)
-    ExaModels.@con(core, c5, - the_dot[j] + the_dot[j-1] + 0.5 * step * (u_the[j] / I_the[j] + u_the[j-1] / I_the[j-1]) for j=2:nh+1)
-    ExaModels.@con(core, c6, - phi_dot[j] + phi_dot[j-1] + 0.5 * step * (u_phi[j] / I_phi[j] + u_phi[j-1] / I_phi[j-1]) for j=2:nh+1)
+    ExaModels.@con(core, c1, - rho[j] + rho[j-1] + 0.5 * tf[1]/nh * (rho_dot[j] + rho_dot[j-1]) for j=2:nh+1)
+    ExaModels.@con(core, c2, - phi[j] + phi[j-1] + 0.5 * tf[1]/nh * (phi_dot[j] + phi_dot[j-1]) for j=2:nh+1)
+    ExaModels.@con(core, c3, - the[j] + the[j-1] + 0.5 * tf[1]/nh * (the_dot[j] + the_dot[j-1]) for j=2:nh+1)
+    ExaModels.@con(core, c4, - rho_dot[j] + rho_dot[j-1] + 0.5 * tf[1]/nh * (u_rho[j] + u_rho[j-1]) / L for j=2:nh+1)
+    ExaModels.@con(core, c5, - the_dot[j] + the_dot[j-1] + 0.5 * tf[1]/nh * (u_the[j] / I_the[j] + u_the[j-1] / I_the[j-1]) for j=2:nh+1)
+    ExaModels.@con(core, c6, - phi_dot[j] + phi_dot[j-1] + 0.5 * tf[1]/nh * (u_phi[j] / I_phi[j] + u_phi[j-1] / I_phi[j-1]) for j=2:nh+1)
 
     # Boundary conditions
     ExaModels.@con(core, c7, - rho[1] + 4.5)

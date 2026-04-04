@@ -36,7 +36,6 @@
     ExaModels.@var(c, cL, nh+1; lvar = fill(cL_min,nh+1), uvar = fill(cL_max, nh+1), start = fill(cL0, nh+1))
 
     # Expressions (matching JuMP @expressions)
-    ExaModels.@expr(c, step, t_f[1] / nh)
     ExaModels.@expr(c, r, (x[i]/r_0 - 2.5)^2 for i in 1:nh+1)
     ExaModels.@expr(c, u, u_c*(1 - r[i])*exp(-r[i]) for i in 1:nh+1)
     ExaModels.@expr(c, w, vy[i] - u[i] for i in 1:nh+1)
@@ -49,10 +48,10 @@
     ExaModels.@obj(c, -x[nh+1])
 
     # Dynamics
-    ExaModels.@con(c, c1, x[j] - (x[j-1] + 0.5 * step * (vx[j] + vx[j-1])) for j in 2:nh+1)
-    ExaModels.@con(c, c2, y[j] - (y[j-1] + 0.5 * step * (vy[j] + vy[j-1])) for j in 2:nh+1)
-    ExaModels.@con(c, c3, vx[j] - (vx[j-1] + 0.5 * step * (vx_dot[j] + vx_dot[j-1])) for j in 2:nh+1)
-    ExaModels.@con(c, c4, vy[j] - (vy[j-1] + 0.5 * step * (vy_dot[j] + vy_dot[j-1])) for j in 2:nh+1)
+    ExaModels.@con(c, c1, x[j] - (x[j-1] + 0.5 * t_f[1]/nh * (vx[j] + vx[j-1])) for j in 2:nh+1)
+    ExaModels.@con(c, c2, y[j] - (y[j-1] + 0.5 * t_f[1]/nh * (vy[j] + vy[j-1])) for j in 2:nh+1)
+    ExaModels.@con(c, c3, vx[j] - (vx[j-1] + 0.5 * t_f[1]/nh * (vx_dot[j] + vx_dot[j-1])) for j in 2:nh+1)
+    ExaModels.@con(c, c4, vy[j] - (vy[j-1] + 0.5 * t_f[1]/nh * (vy_dot[j] + vy_dot[j-1])) for j in 2:nh+1)
 
     # Boundary constraints
     ExaModels.@con(c, c5, x[1] - x_0)
