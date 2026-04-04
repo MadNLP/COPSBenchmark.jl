@@ -27,7 +27,7 @@ function COPSBenchmark.channel_model(::JuMPBackend, nh)
 
     model = Model()
 
-    @variable(model, v[i=1:nh, j=1:nd])
+    @variable(model, v[i=1:nh, j=1:nd], start=v0[i, j])
     @variable(model, w[i=1:nh, j=1:nc], start=0.0)
 
     @variable(model, uc[i=1:nh, j=1:nc, s=1:nd], start=v0[i, s])
