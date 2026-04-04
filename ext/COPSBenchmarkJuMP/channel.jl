@@ -5,7 +5,7 @@
 # COPS 3.0 - November 2002
 # COPS 3.1 - March 2004
 
-function COPSBenchmark.channel_model(nh, ::JuMPBackend)
+function COPSBenchmark.channel_model(::JuMPBackend, nh)
     nc = 4
     nd = 4
     R = 10.0 # Reynolds number

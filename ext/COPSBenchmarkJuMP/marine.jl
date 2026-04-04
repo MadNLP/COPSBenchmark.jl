@@ -5,7 +5,7 @@
 # COPS 3.0 - November 2002
 # COPS 3.1 - March 2004
 
-function COPSBenchmark.marine_model(nh, ::JuMPBackend)
+function COPSBenchmark.marine_model(::JuMPBackend, nh)
     nc = 1     # number of collocation points
     ne = 8     # number of differential equations
     nm = 21    # number of measurements

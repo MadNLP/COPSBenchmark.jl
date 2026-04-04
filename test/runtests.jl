@@ -65,8 +65,8 @@ end
     COPSBenchmark.ExaModelsBackend(),
 ]
     @testset "Instance $instance" for (instance, params, result) in COPS_INSTANCES
-        if hasmethod(instance, Tuple{typeof.(params)..., typeof(backend)})
-            model = instance(params..., backend)
+        if hasmethod(instance, Tuple{typeof(backend), typeof.(params)...})
+            model = instance(backend, params...)
             status, obj_val = solve_backend(model, backend)
             # Test that the objective matches the value reported in
             # http://www.mcs.anl.gov/~more/cops/cops3.pdf
@@ -76,7 +76,7 @@ end
     end
 end
 
-# Models without lifted variables (same variable/constraint space in both backends).
+# Models to compare callbacks between JuMP and ExaModels backends.
 COMPARE_INSTANCES = [
     (COPSBenchmark.bearing_model, (10, 10)),
     (COPSBenchmark.camshape_model, (100,)),
@@ -84,17 +84,19 @@ COMPARE_INSTANCES = [
     (COPSBenchmark.chain_model, (100,)),
     (COPSBenchmark.elec_model, (25,)),
     (COPSBenchmark.gasoil_model, (10,)),
+    (COPSBenchmark.glider_model, (20,)),
     (COPSBenchmark.marine_model, (10,)),
     (COPSBenchmark.methanol_model, (10,)),
     (COPSBenchmark.minsurf_model, (10, 10)),
     (COPSBenchmark.pinene_model, (10,)),
+    (COPSBenchmark.robot_model, (20,)),
     (COPSBenchmark.rocket_model, (50,)),
     (COPSBenchmark.steering_model, (50,)),
 ]
 
 @testset "Compare callbacks: $instance" for (instance, params) in COMPARE_INSTANCES
-    jump_model = instance(params..., COPSBenchmark.JuMPBackend())
-    exa_model = instance(params..., COPSBenchmark.ExaModelsBackend())
+    jump_model = instance(COPSBenchmark.JuMPBackend(), params...)
+    exa_model = instance(COPSBenchmark.ExaModelsBackend(), params...)
 
     jump_nlp = MathOptNLPModel(jump_model)
 

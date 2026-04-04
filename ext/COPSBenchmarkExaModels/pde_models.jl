@@ -1,5 +1,5 @@
 
-function COPSBenchmark.transition_state_model(problem, dom::COPSBenchmark.PDEDiscretizationDomain, ::ExaModelsBackend; T = Float64, backend = nothing, kwargs...)
+function COPSBenchmark.transition_state_model(::ExaModelsBackend, problem, dom::COPSBenchmark.PDEDiscretizationDomain; T = Float64, backend = nothing, kwargs...)
     a, b, c, d, p = problem.a, problem.b, problem.c, problem.d, problem.p
     x0 = COPSBenchmark._initial_position!(problem, dom, 10)
     array1 = [
@@ -37,40 +37,43 @@ function COPSBenchmark.transition_state_model(problem, dom::COPSBenchmark.PDEDis
     # Build optimization problem
     core = ExaModels.ExaCore(T; backend = backend)
 
-    u = ExaModels.variable(core, 1:dom.BREAK+2, 1:dom.NODES; start=x0.u)
-    integral = ExaModels.variable(core, 1:dom.BREAK+2, 1:dom.ELEM)
-    z = ExaModels.variable(core, 1; start=x0.z)
+    ExaModels.@var(core, u, 1:dom.BREAK+2, 1:dom.NODES; start=x0.u)
+    ExaModels.@var(core, integral, 1:dom.BREAK+2, 1:dom.ELEM)
+    ExaModels.@var(core, z, 1; start=x0.z)
 
-    ExaModels.objective(core, z[1])
+    ExaModels.@obj(core, z[1])
 
-    c1 = ExaModels.constraint(
+    ExaModels.@con(
         core,
+        c1,
         - z[1] for b1 in 1:dom.BREAK + 2;
         lcon = -Inf,
         ucon = 0.0,
     )
 
-    ExaModels.constraint!(
+    ExaModels.@con!(
         core,
         c1,
         b1 => integral[b1, e1] for b1 in 1:dom.BREAK +2, e1 in 1:dom.ELEM
     )
 
-    c2 = ExaModels.constraint(
+    ExaModels.@con(
         core,
+        c2,
         dom.BREAK+1;
         lcon=-Inf,
         ucon=H^2,
     )
 
-    ExaModels.constraint!(
+    ExaModels.@con!(
         core,
         c2,
         b1 => (u[b1+1, n] - u[b1, n])^2 for b1 in 1:dom.BREAK+1, n in 1:dom.NODES
     )
 
-    c3 = ExaModels.constraint(
+    ExaModels.@con(
         core,
+        c3,
         AREA*(
             a / (8*AREA^2)*(
                 u[b1,TRIANG1]^2*(EDGE_21^2 + EDGE_22^2) +
@@ -85,7 +88,7 @@ function COPSBenchmark.transition_state_model(problem, dom::COPSBenchmark.PDEDis
         for b1 in 1:dom.BREAK+2, (e1, TRIANG1, TRIANG2, TRIANG3, AREA, EDGE_11, EDGE_12, EDGE_21, EDGE_22, EDGE_31, EDGE_32) in array1
     )
 
-    ExaModels.constraint!(
+    ExaModels.@con!(
         core,
         c3,
         (b1, e1) => AREA* 1 / (dom.DIMEN+1) *
@@ -95,18 +98,21 @@ function COPSBenchmark.transition_state_model(problem, dom::COPSBenchmark.PDEDis
 
     # Boundary
     boundary_nodes = findall(isequal(1), dom.BNDRY)
-    ExaModels.constraint(
+    ExaModels.@con(
         core,
+        c4,
         u[b1+1, n] for b1 in 1:dom.BREAK, n in boundary_nodes
     )
-    ExaModels.constraint(
+    ExaModels.@con(
         core,
+        c5,
         u[1, n] for n in 1:dom.NODES;
         lcon=dom.US,
         ucon=dom.US,
     )
-    ExaModels.constraint(
+    ExaModels.@con(
         core,
+        c6,
         u[dom.BREAK+2, n] for n in 1:dom.NODES;
         lcon=dom.UE,
         ucon=dom.UE,

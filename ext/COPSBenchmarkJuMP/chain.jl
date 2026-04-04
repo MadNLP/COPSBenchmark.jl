@@ -10,7 +10,7 @@
 
 # This file has been adapted from https://github.com/JuliaSmoothOptimizers/OptimizationProblems.jl
 
-function COPSBenchmark.chain_model(n::Int, ::JuMPBackend)
+function COPSBenchmark.chain_model(::JuMPBackend, n::Int)
     nh = max(2, div(n - 4, 4))
 
     L = 4

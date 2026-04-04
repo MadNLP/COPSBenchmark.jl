@@ -19,6 +19,8 @@ include("pinene.jl")
 include("robot.jl")
 include("rocket.jl")
 include("steering.jl")
+include("channel.jl")
+include("torsion.jl")
 include("pde_models.jl")
 
 end
