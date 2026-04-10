@@ -50,46 +50,46 @@
 
     core = ExaModels.ExaCore(T; backend= backend)
 
-    ExaModels.@var(core, theta, 1:np; lvar = 0.0, start=0.0)
+    ExaModels.@add_variable(core, theta, 1:np; lvar = 0.0, start=0.0)
     # The collocation approximation u is defined by the parameters v and w.
     # uc and Duc are, respectively, u and u' evaluated at the collocation points.
-    ExaModels.@var(core, v, 1:nh, 1:ne; start=[v0[i, s] for i=1:nh, s=1:ne])
-    ExaModels.@var(core, w, 1:nh, 1:nc, 1:ne; start=0.0)
-    ExaModels.@var(core, uc, 1:nh, 1:nc, 1:ne; start=[v0[i,s] for i=1:nh, j=1:nc, s=1:ne])
-    ExaModels.@var(core, Duc, 1:nh, 1:nc, 1:ne; start=0.0)
+    ExaModels.@add_variable(core, v, 1:nh, 1:ne; start=[v0[i, s] for i=1:nh, s=1:ne])
+    ExaModels.@add_variable(core, w, 1:nh, 1:nc, 1:ne; start=0.0)
+    ExaModels.@add_variable(core, uc, 1:nh, 1:nc, 1:ne; start=[v0[i,s] for i=1:nh, j=1:nc, s=1:ne])
+    ExaModels.@add_variable(core, Duc, 1:nh, 1:nc, 1:ne; start=0.0)
 
     itr = [(j, s, itau[j], tau[j], t[itau[j]], z[j,s]) for j=1:nm, s in 1:ne]
     # l2 error
-    ExaModels.@obj(core, (v[it,s] + sum(w[it,k,s]*(tj-ti)^k/(factorial(k)*h^(k-1)) for k in 1:nc) - zjs)^2 for (j, s, it, tj, ti, zjs) in itr)
+    ExaModels.@add_objective(core, (v[it,s] + sum(w[it,k,s]*(tj-ti)^k/(factorial(k)*h^(k-1)) for k in 1:nc) - zjs)^2 for (j, s, it, tj, ti, zjs) in itr)
 
     # Collocation model
     itr2 = [(j,rho[j]) for j=1:nc]
-    ExaModels.@con(
+    ExaModels.@add_constraint(
         core,
         c1,
         - uc[i, j, s] + v[i,s] + h*sum(w[i,k,s]*(rhoj^k/factorial(k)) for k in 1:nc)
         for i=1:nh, (j,rhoj) in itr2, s=1:ne
     )
-    ExaModels.@con(
+    ExaModels.@add_constraint(
         core,
         c2,
         - Duc[i, j, s] + sum(w[i,k,s]*(rhoj^(k-1)/factorial(k-1)) for k in 1:nc)
         for i=1:nh, (j,rhoj) in itr2, s=1:ne
     )
     # Boundary
-    ExaModels.@con(core, c3, -v[1, s] + bcs for (s,bcs) in enumerate(bc))
+    ExaModels.@add_constraint(core, c3, -v[1, s] + bcs for (s,bcs) in enumerate(bc))
     # Continuity
-    ExaModels.@con(
+    ExaModels.@add_constraint(
         core,
         c4,
         v[i, s] + sum(w[i, j, s]*h/factorial(j) for j in 1:nc) - v[i+1, s]
         for i=1:nh-1, s=1:ne
     )
-    ExaModels.@con(core, c5, -Duc[i,j,1] - (theta[1]+theta[2])*uc[i,j,1] for i=1:nh, j=1:nc)
-    ExaModels.@con(core, c6, -Duc[i,j,2] + theta[1]*uc[i,j,1] for i=1:nh, j=1:nc)
-    ExaModels.@con(core, c7, -Duc[i,j,3] + theta[2]*uc[i,j,1] - (theta[3]+theta[4])*uc[i,j,3] + theta[5]*uc[i,j,5] for i=1:nh, j=1:nc)
-    ExaModels.@con(core, c8, -Duc[i,j,4] + theta[3]*uc[i,j,3] for i=1:nh, j=1:nc)
-    ExaModels.@con(core, c9, -Duc[i,j,5] + theta[4]*uc[i,j,3] - theta[5]*uc[i,j,5] for i=1:nh, j=1:nc)
+    ExaModels.@add_constraint(core, c5, -Duc[i,j,1] - (theta[1]+theta[2])*uc[i,j,1] for i=1:nh, j=1:nc)
+    ExaModels.@add_constraint(core, c6, -Duc[i,j,2] + theta[1]*uc[i,j,1] for i=1:nh, j=1:nc)
+    ExaModels.@add_constraint(core, c7, -Duc[i,j,3] + theta[2]*uc[i,j,1] - (theta[3]+theta[4])*uc[i,j,3] + theta[5]*uc[i,j,5] for i=1:nh, j=1:nc)
+    ExaModels.@add_constraint(core, c8, -Duc[i,j,4] + theta[3]*uc[i,j,3] for i=1:nh, j=1:nc)
+    ExaModels.@add_constraint(core, c9, -Duc[i,j,5] + theta[4]*uc[i,j,3] - theta[5]*uc[i,j,5] for i=1:nh, j=1:nc)
 
     return ExaModels.ExaModel(core; kwargs...)
 end
