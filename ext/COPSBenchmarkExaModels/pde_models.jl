@@ -37,13 +37,13 @@
     # Build optimization problem
     core = ExaModels.ExaCore(T; backend = backend)
 
-    ExaModels.@add_variable(core, u, 1:dom.BREAK+2, 1:dom.NODES; start=x0.u)
-    ExaModels.@add_variable(core, integral, 1:dom.BREAK+2, 1:dom.ELEM)
-    ExaModels.@add_variable(core, z, 1; start=x0.z)
+    ExaModels.@add_var(core, u, 1:dom.BREAK+2, 1:dom.NODES; start=x0.u)
+    ExaModels.@add_var(core, integral, 1:dom.BREAK+2, 1:dom.ELEM)
+    ExaModels.@add_var(core, z, 1; start=x0.z)
 
-    ExaModels.@add_objective(core, z[1])
+    ExaModels.@add_obj(core, z[1])
 
-    ExaModels.@add_constraint(
+    ExaModels.@add_con(
         core,
         c1,
         - z[1] for b1 in 1:dom.BREAK + 2;
@@ -51,13 +51,13 @@
         ucon = 0.0,
     )
 
-    ExaModels.@add_constraint!(
+    ExaModels.@add_con!(
         core,
         c1,
         b1 => integral[b1, e1] for b1 in 1:dom.BREAK +2, e1 in 1:dom.ELEM
     )
 
-    ExaModels.@add_constraint(
+    ExaModels.@add_con(
         core,
         c2,
         dom.BREAK+1;
@@ -65,13 +65,13 @@
         ucon=H^2,
     )
 
-    ExaModels.@add_constraint!(
+    ExaModels.@add_con!(
         core,
         c2,
         b1 => (u[b1+1, n] - u[b1, n])^2 for b1 in 1:dom.BREAK+1, n in 1:dom.NODES
     )
 
-    ExaModels.@add_constraint(
+    ExaModels.@add_con(
         core,
         c3,
         AREA*(
@@ -88,7 +88,7 @@
         for b1 in 1:dom.BREAK+2, (e1, TRIANG1, TRIANG2, TRIANG3, AREA, EDGE_11, EDGE_12, EDGE_21, EDGE_22, EDGE_31, EDGE_32) in array1
     )
 
-    ExaModels.@add_constraint!(
+    ExaModels.@add_con!(
         core,
         c3,
         (b1, e1) => AREA* 1 / (dom.DIMEN+1) *
@@ -98,19 +98,19 @@
 
     # Boundary
     boundary_nodes = findall(isequal(1), dom.BNDRY)
-    ExaModels.@add_constraint(
+    ExaModels.@add_con(
         core,
         c4,
         u[b1+1, n] for b1 in 1:dom.BREAK, n in boundary_nodes
     )
-    ExaModels.@add_constraint(
+    ExaModels.@add_con(
         core,
         c5,
         u[1, n] for n in 1:dom.NODES;
         lcon=dom.US,
         ucon=dom.US,
     )
-    ExaModels.@add_constraint(
+    ExaModels.@add_con(
         core,
         c6,
         u[dom.BREAK+2, n] for n in 1:dom.NODES;

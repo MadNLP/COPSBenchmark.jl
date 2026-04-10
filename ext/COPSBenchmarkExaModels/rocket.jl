@@ -21,24 +21,24 @@
 
     core = ExaModels.ExaCore(T; backend= backend, minimize=false)
 
-    ExaModels.@add_variable(core, h, 0:nh; start=1.0, lvar = 1.0)
-    ExaModels.@add_variable(core, v, 0:nh; start=(i/nh*(1.0 - i/nh) for i=0:nh), lvar = 0.0)
-    ExaModels.@add_variable(core, m, 0:nh; start=((m_f - m_0)*(i/nh) + m_0 for i=0:nh), lvar = m_f, uvar = m_0)
-    ExaModels.@add_variable(core, T, 0:nh; start=T_max/2.0, lvar = 0.0, uvar = T_max)
-    ExaModels.@add_variable(core, step, 1; start=1/nh, lvar = 0.0)
+    ExaModels.@add_var(core, h, 0:nh; start=1.0, lvar = 1.0)
+    ExaModels.@add_var(core, v, 0:nh; start=(i/nh*(1.0 - i/nh) for i=0:nh), lvar = 0.0)
+    ExaModels.@add_var(core, m, 0:nh; start=((m_f - m_0)*(i/nh) + m_0 for i=0:nh), lvar = m_f, uvar = m_0)
+    ExaModels.@add_var(core, T, 0:nh; start=T_max/2.0, lvar = 0.0, uvar = T_max)
+    ExaModels.@add_var(core, step, 1; start=1/nh, lvar = 0.0)
 
-    ExaModels.@add_objective(core, h[nh])
+    ExaModels.@add_obj(core, h[nh])
 
     # Dynamics
-    ExaModels.@add_constraint(core, c1, - h[i] + h[i-1] + 0.5 * step[1] * (v[i] + v[i-1]) for i=1:nh)
-    ExaModels.@add_constraint(core, c2, - v[i] + v[i-1] + 0.5 * step[1] * ((T[i] - D_c*v[i]^2*exp(-h_c*(h[i] - h_0))/h_0 - m[i] * g_0 * (h_0 / h[i])^2) / m[i] + (T[i-1] - D_c*v[i-1]^2*exp(-h_c*(h[i-1] - h_0))/h_0 - m[i-1] * g_0 * (h_0 / h[i-1])^2) / m[i-1]) for i=1:nh)
-    ExaModels.@add_constraint(core, c3, - m[i] + m[i-1] + 0.5 * step[1] * (-T[i]/c + -T[i-1]/c) for i=1:nh)
+    ExaModels.@add_con(core, c1, - h[i] + h[i-1] + 0.5 * step[1] * (v[i] + v[i-1]) for i=1:nh)
+    ExaModels.@add_con(core, c2, - v[i] + v[i-1] + 0.5 * step[1] * ((T[i] - D_c*v[i]^2*exp(-h_c*(h[i] - h_0))/h_0 - m[i] * g_0 * (h_0 / h[i])^2) / m[i] + (T[i-1] - D_c*v[i-1]^2*exp(-h_c*(h[i-1] - h_0))/h_0 - m[i-1] * g_0 * (h_0 / h[i-1])^2) / m[i-1]) for i=1:nh)
+    ExaModels.@add_con(core, c3, - m[i] + m[i-1] + 0.5 * step[1] * (-T[i]/c + -T[i-1]/c) for i=1:nh)
 
     # Boundary ExaModels.constraints
-    ExaModels.@add_constraint(core, c4, h[0] - h_0)
-    ExaModels.@add_constraint(core, c5, v[0] - v_0)
-    ExaModels.@add_constraint(core, c6, m[0] - m_0)
-    ExaModels.@add_constraint(core, c7, m[nh] - m_f)
+    ExaModels.@add_con(core, c4, h[0] - h_0)
+    ExaModels.@add_con(core, c5, v[0] - v_0)
+    ExaModels.@add_con(core, c6, m[0] - m_0)
+    ExaModels.@add_con(core, c7, m[nh] - m_f)
 
     return ExaModels.ExaModel(core; kwargs...)
 end

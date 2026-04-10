@@ -76,54 +76,54 @@
     v0 .= 0.001
 
     c = ExaModels.ExaCore(T; backend = backend)
-    ExaModels.@add_variable(c, theta, np; lvar = 0, start = fill(1, np))
-    ExaModels.@add_variable(c, v, nh, ne; start = v0)
-    ExaModels.@add_variable(c, w, nh, nc, ne; start = 0)
-    ExaModels.@add_variable(c, uc, nh, nc, ne; start = [v0[i,s] for i=1:nh, j=1:nc, s=1:ne])
-    ExaModels.@add_variable(c, Duc, nh, nc, ne; start = 0)
+    ExaModels.@add_var(c, theta, np; lvar = 0, start = fill(1, np))
+    ExaModels.@add_var(c, v, nh, ne; start = v0)
+    ExaModels.@add_var(c, w, nh, nc, ne; start = 0)
+    ExaModels.@add_var(c, uc, nh, nc, ne; start = [v0[i,s] for i=1:nh, j=1:nc, s=1:ne])
+    ExaModels.@add_var(c, Duc, nh, nc, ne; start = 0)
 
-    ExaModels.@add_objective(c, (v[itau,s] + sum(w[itau,k,s]*(tau-t)^k/(factorial(k)*h^(k-1)) for k in 1:nc) - z)^2 for (j,s,itau,tau,z,t) in con1_matrix)
+    ExaModels.@add_obj(c, (v[itau,s] + sum(w[itau,k,s]*(tau-t)^k/(factorial(k)*h^(k-1)) for k in 1:nc) - z)^2 for (j,s,itau,tau,z,t) in con1_matrix)
 
-    ExaModels.@add_constraint(
+    ExaModels.@add_con(
         c,
         c1,
         uc[i, j, s] - v[i,s] - h*sum(w[i,k,s]*(rho^k/factorial(k)) for k in 1:nc) for i=1:nh, (j,rho) in [(j, rho[j]) for j in 1:nc], s=1:ne
     )
 
-    ExaModels.@add_constraint(
+    ExaModels.@add_con(
         c,
         c2,
         Duc[i, j, s] - sum(w[i,k,s]*(rho^(k-1)/factorial(k-1)) for k in 1:nc) for i=1:nh, (j,rho) in [(j, rho[j]) for j in 1:nc], s=1:ne
     )
 
-    ExaModels.@add_constraint(
+    ExaModels.@add_con(
         c,
         c3,
         v[1, s] - bc for (s, bc) in [(s, bc[s]) for s in 1:ne]
 
     )
 
-    ExaModels.@add_constraint(
+    ExaModels.@add_con(
         c,
         c4,
         v[i, s] + sum(w[i, j, s]*h/factorial(j) for j in 1:nc) - v[i+1, s] for i=1:nh-1, s=1:ne
     )
 
-    ExaModels.@add_constraint(
+    ExaModels.@add_con(
         c,
         c5,
         Duc[i,j,1] + ((2*theta[2] - (theta[1]*uc[i,j,2])/((theta[2]+theta[5])*uc[i,j,1]+uc[i,j,2]) +
                          theta[3] + theta[4])*uc[i,j,1]) for i=1:nh, j=1:nc
     )
 
-    ExaModels.@add_constraint(
+    ExaModels.@add_con(
         c,
         c6,
         Duc[i,j,2] - ((theta[1]*uc[i,j,1]*(theta[2]*uc[i,j,1]-uc[i,j,2]))/ ((theta[2]+theta[5])*uc[i,j,1]+uc[i,j,2]) +
                      theta[3]*uc[i,j,1]) for i=1:nh, j=1:nc
     )
 
-    ExaModels.@add_constraint(
+    ExaModels.@add_con(
         c,
         c7,
         Duc[i,j,3] - ((theta[1]*uc[i,j,1]*(uc[i,j,2]+theta[5]*uc[i,j,1]))/ ((theta[2]+theta[5])*uc[i,j,1]+uc[i,j,2]) +
