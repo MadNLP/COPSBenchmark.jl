@@ -12,7 +12,7 @@
     # Distance to boundary: D[k1,k2] for k1 in 1:nx+2, k2 in 1:ny+2
     D = T[min(min(i, nx-i+1)*hx, min(j, ny-j+1)*hy) for i in 0:nx+1, j in 0:ny+1]
 
-    core = ExaModels.ExaCore(T; backend = backend)
+    core = ExaModels.ExaCore(T; backend = backend, concrete = Val(true))
     ExaModels.@add_var(core, v, nx+2, ny+2; start = D)
 
     # Objective = area * ((quadLower + quadUpper)/2 - c*(linLower + linUpper)/3)

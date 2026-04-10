@@ -22,7 +22,7 @@ include(joinpath(@__DIR__, "..", "..", "data", "triangle.jl"))
     uvar[Const] = x0[Const]
     uvar[Const .+ N] = x0[Const .+ N]
 
-    c = ExaModels.ExaCore(T; backend = backend)
+    c = ExaModels.ExaCore(T; backend = backend, concrete = Val(true))
 
     ExaModels.@add_var(c, x, n; lvar = lvar, uvar = uvar, start = x0)
 

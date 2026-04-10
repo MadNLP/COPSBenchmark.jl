@@ -62,7 +62,7 @@
         v0[i, s] = z[nm, s]
     end
 
-    core = ExaModels.ExaCore(T; backend= backend)
+    core = ExaModels.ExaCore(T; backend= backend, concrete = Val(true))
 
     # ODE parameters
     ExaModels.@add_var(core, theta, 1:np; lvar = 0.0, start=0.0)

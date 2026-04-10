@@ -18,7 +18,7 @@
     tf = 1.0
     h = tf / nh
 
-    c = ExaModels.ExaCore(T; backend = backend)
+    c = ExaModels.ExaCore(T; backend = backend, concrete = Val(true))
     ExaModels.@add_var(c, u, nh + 1; start = [4 * abs(b - a) * (k / nh - tmin) for k in 1:nh+1])
     ExaModels.@add_var(c, x1, nh + 1; start = [4 * abs(b - a) * k / nh * (1 / 2 * k / nh - tmin) + a for k in 1:nh+1])
     ExaModels.@add_var(c, x2, nh + 1; start = [(4 * abs(b - a) * k / nh * (1 / 2 * k / nh - tmin) + a) *

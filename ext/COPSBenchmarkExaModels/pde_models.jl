@@ -35,7 +35,7 @@
     H = ALPHA / (dom.BREAK+1) * sqrt(sum((dom.US[n] - dom.UE[n])^2 for n in 1:dom.NODES))
 
     # Build optimization problem
-    core = ExaModels.ExaCore(T; backend = backend)
+    core = ExaModels.ExaCore(T; backend = backend, concrete = Val(true))
 
     ExaModels.@add_var(core, u, 1:dom.BREAK+2, 1:dom.NODES; start=x0.u)
     ExaModels.@add_var(core, integral, 1:dom.BREAK+2, 1:dom.ELEM)

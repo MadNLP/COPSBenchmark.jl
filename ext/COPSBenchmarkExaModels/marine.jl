@@ -56,7 +56,7 @@
         v0[i, s] = z[nm, s]
     end
 
-    core = ExaModels.ExaCore(T; backend= backend)
+    core = ExaModels.ExaCore(T; backend= backend, concrete = Val(true))
 
     # Growth rates
     ExaModels.@add_var(core, g, 1:ne-1; lvar =  0.0)

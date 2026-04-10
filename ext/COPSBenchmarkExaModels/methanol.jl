@@ -75,7 +75,7 @@
     end
     v0 .= 0.001
 
-    c = ExaModels.ExaCore(T; backend = backend)
+    c = ExaModels.ExaCore(T; backend = backend, concrete = Val(true))
     ExaModels.@add_var(c, theta, np; lvar = 0, start = fill(1, np))
     ExaModels.@add_var(c, v, nh, ne; start = v0)
     ExaModels.@add_var(c, w, nh, nc, ne; start = 0)

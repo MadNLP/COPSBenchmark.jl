@@ -81,7 +81,7 @@
     bc4_cv = [h^(k-2)/fac[k-1] for k in 2:nd]
     bc4_cw = [h^(nd-1)/fac[k+nd-1] for k in 1:nc]
 
-    core = ExaModels.ExaCore(T; backend = backend)
+    core = ExaModels.ExaCore(T; backend = backend, concrete = Val(true))
 
     ExaModels.@add_var(core, v, nh, nd; start = v0)
     ExaModels.@add_var(core, w, nh, nc; start = 0.0)

@@ -26,7 +26,7 @@
     cL_max = 1.4
     cL0 = cL_max / 2
 
-    c = ExaModels.ExaCore(T; backend = backend)
+    c = ExaModels.ExaCore(T; backend = backend, concrete = Val(true))
 
     ExaModels.@add_var(c, t_f, 1; lvar = 0.0, start = 1.0)
     ExaModels.@add_var(c, x, nh+1; lvar = zeros(nh+1), start = [x_0 + vx_0*(k/nh) for k in 0:nh])

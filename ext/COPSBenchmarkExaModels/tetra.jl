@@ -24,7 +24,7 @@ include(joinpath(@__DIR__, "..", "..", "data", "tetra.jl"))
     uvar[Const .+ N] .= x0[Const .+ N]
     uvar[Const .+ 2 * N] .= x0[Const .+ 2 * N]
 
-    c = ExaModels.ExaCore(T; backend = backend)
+    c = ExaModels.ExaCore(T; backend = backend, concrete = Val(true))
 
     ExaModels.@add_var(c, x, n; lvar = lvar, uvar = uvar, start = x0)
 

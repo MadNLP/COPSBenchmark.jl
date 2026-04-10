@@ -23,7 +23,7 @@
         end
     end
 
-    core = ExaModels.ExaCore(T; backend= backend)
+    core = ExaModels.ExaCore(T; backend= backend, concrete = Val(true))
 
     ExaModels.@add_var(core, u, 1:nh+1; lvar = u_min, uvar =  u_max, start=0.0)   # control
     ExaModels.@add_var(core, x, 1:nh+1, 1:4; start=[gen_x0(i, j) for i=1:nh+1, j=1:4])     # state

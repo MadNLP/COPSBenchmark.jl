@@ -18,7 +18,7 @@
     rho0 = 4.5
     phi0 = pi /4
 
-    core = ExaModels.ExaCore(T; backend= backend)
+    core = ExaModels.ExaCore(T; backend= backend, concrete = Val(true))
 
     ExaModels.@add_var(core, rho, nh+1; start=rho0, lvar =  0 , uvar = L)
     ExaModels.@add_var(core, the, nh+1; start=[2*pi/3*(k/nh)^2 for k=1:nh+1], lvar =  -pi , uvar = pi)

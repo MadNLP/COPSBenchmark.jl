@@ -15,7 +15,7 @@
     wq(i) = (1.0 + e*cos((i-1)*hx))^3
     v0 = [max(sin((i-1)*hx), 0.0) for i in 1:nx+2, j in 1:ny+2]
 
-    core = ExaModels.ExaCore(T; backend=backend)
+    core = ExaModels.ExaCore(T; backend=backend, concrete = Val(true))
 
     ExaModels.@add_var(core, v, 1:nx+2, 1:ny+2; lvar = 0.0, start=v0)
 

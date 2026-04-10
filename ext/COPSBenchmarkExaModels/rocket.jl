@@ -19,7 +19,7 @@
     D_c = 0.5 * v_c * (m_0 / g_0)
     T_max = T_c * m_0 * g_0
 
-    core = ExaModels.ExaCore(T; backend= backend, minimize=false)
+    core = ExaModels.ExaCore(T; backend= backend, minimize=false, concrete = Val(true))
 
     ExaModels.@add_var(core, h, 0:nh; start=1.0, lvar = 1.0)
     ExaModels.@add_var(core, v, 0:nh; start=(i/nh*(1.0 - i/nh) for i=0:nh), lvar = 0.0)

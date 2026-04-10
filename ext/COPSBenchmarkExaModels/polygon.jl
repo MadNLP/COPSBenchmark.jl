@@ -9,7 +9,7 @@
 @inline function COPSBenchmark.polygon_model(::ExaModelsBackend, n::Int; T = Float64, backend = nothing, kwargs...)
     N = div(n, 2)
 
-    c = ExaModels.ExaCore(T; backend = backend)
+    c = ExaModels.ExaCore(T; backend = backend, concrete = Val(true))
 
     ExaModels.@add_var(c, r, N; lvar = 0.0, uvar = 1.0, start = 1.0)
     ExaModels.@add_var(c, θ, N; lvar = 0.0, uvar = T(π), start = [i * π / (N - 1) - π / (N - 1) for i in 1:N])

@@ -12,7 +12,7 @@
     theta = (2pi) .* rand(np)
     phi = pi .* rand(np)
 
-    core = ExaModels.ExaCore(T; backend= backend)
+    core = ExaModels.ExaCore(T; backend= backend, concrete = Val(true))
     ExaModels.@add_var(core, x, 1:np; start = [cos(theta[i])*sin(phi[i]) for i=1:np])
     ExaModels.@add_var(core, y, 1:np; start = [sin(theta[i])*sin(phi[i]) for i=1:np])
     ExaModels.@add_var(core, z, 1:np; start = [cos(phi[i]) for i=1:np])

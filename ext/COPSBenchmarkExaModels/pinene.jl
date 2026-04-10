@@ -48,7 +48,7 @@
         v0[i, s] = z[nm, s]
     end
 
-    core = ExaModels.ExaCore(T; backend= backend)
+    core = ExaModels.ExaCore(T; backend= backend, concrete = Val(true))
 
     ExaModels.@add_var(core, theta, 1:np; lvar = 0.0, start=0.0)
     # The collocation approximation u is defined by the parameters v and w.

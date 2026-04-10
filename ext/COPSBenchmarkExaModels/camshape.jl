@@ -13,7 +13,7 @@
 
     d_theta = 2*pi/(5*(n+1))   # angle between discretization points
 
-    core = ExaModels.ExaCore(T; backend= backend, minimize=false)
+    core = ExaModels.ExaCore(T; backend= backend, minimize=false, concrete = Val(true))
 
     # radius of the cam at discretization points
     ExaModels.@add_var(core, r, 1:n; lvar =R_min, uvar = R_max, start=(R_min+R_max)/2.0)

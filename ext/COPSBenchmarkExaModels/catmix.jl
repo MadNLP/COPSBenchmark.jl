@@ -19,7 +19,7 @@
     alpha = 0.0      # Smoothing parameter
     rho_index = [(i, rho[i]) for i in 1:nc]
 
-    c = ExaModels.ExaCore(T; backend = backend)
+    c = ExaModels.ExaCore(T; backend = backend, concrete = Val(true))
     ExaModels.@add_var(c, u, nh, nc; lvar = zeros(nh, nc), uvar = ones(nh, nc), start = zeros(nh, nc))
     ExaModels.@add_var(c, v, nh, ne; start = [mod(j, ne) for i in 1:nh, j in 1:ne])
     ExaModels.@add_var(c, w, nh, nc, ne; start = zeros(nh, nc, ne))
