@@ -6,24 +6,23 @@
 # COPS 3.1 - March 2004
 
 function COPSBenchmark.glider_model(::JuMPBackend, nh)
-    # Design parameters
-    x_0 = 0.0
-    y_0 = 1000.0
-    y_f = 900.0
-    vx_0 = 13.23
-    vx_f = 13.23
-    vy_0 = -1.288
-    vy_f = -1.288
-    u_c = 2.5
-    r_0 = 100.0
-    m = 100.0
-    g = 9.81
-    c0 = 0.034
-    c1 = 0.069662
-    S = 14.0
-    rho = 1.13
-    cL_min = 0.0
-    cL_max = 1.4
+    x_0    = COPSBenchmark.glider_x_0
+    y_0    = COPSBenchmark.glider_y_0
+    y_f    = COPSBenchmark.glider_y_f
+    vx_0   = COPSBenchmark.glider_vx_0
+    vx_f   = COPSBenchmark.glider_vx_f
+    vy_0   = COPSBenchmark.glider_vy_0
+    vy_f   = COPSBenchmark.glider_vy_f
+    u_c    = COPSBenchmark.glider_u_c
+    r_0    = COPSBenchmark.glider_r_0
+    m      = COPSBenchmark.glider_m
+    g      = COPSBenchmark.glider_g
+    c0     = COPSBenchmark.glider_cd0
+    c1     = COPSBenchmark.glider_cd1
+    S      = COPSBenchmark.glider_S
+    rho    = COPSBenchmark.glider_rho
+    cL_min = COPSBenchmark.glider_cL_min
+    cL_max = COPSBenchmark.glider_cL_max
 
     model = Model()
 
@@ -36,7 +35,6 @@ function COPSBenchmark.glider_model(::JuMPBackend, nh)
         cL_min <= cL[k=0:nh] <= cL_max, (start=cL_max/2.0)
     end)
 
-    # N.B.: transform Max as Min to be consistent with ExaModels.
     @objective(model, Min, -x[nh])
 
     @expressions(model, begin
@@ -51,14 +49,12 @@ function COPSBenchmark.glider_model(::JuMPBackend, nh)
         vy_dot[i=0:nh], (L[i]*(vx[i]/v[i]) - D[i]*(w[i]/v[i]))/m - g
     end)
 
-    # Dynamics
     @constraints(model, begin
         x_eqn[j=1:nh],  x[j] == x[j-1] + 0.5 * step * (vx[j] + vx[j-1])
         y_eqn[j=1:nh],  y[j] == y[j-1] + 0.5 * step * (vy[j] + vy[j-1])
         vx_eqn[j=1:nh], vx[j] == vx[j-1] + 0.5 * step * (vx_dot[j] + vx_dot[j-1])
         vy_eqn[j=1:nh], vy[j] == vy[j-1] + 0.5 * step * (vy_dot[j] + vy_dot[j-1])
     end)
-    # Boundary constraints
     @constraints(model, begin
         x[0] == x_0
         y[0] == y_0
@@ -71,4 +67,3 @@ function COPSBenchmark.glider_model(::JuMPBackend, nh)
 
     return model
 end
-

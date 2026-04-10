@@ -10,7 +10,7 @@
 
 function COPSBenchmark.polygon_model(::JuMPBackend, n::Int)
     nlp = Model()
-    N = div(n, 2)
+    N = COPSBenchmark.polygon_N(n)
     @variable(nlp, 0 <= r[1:N] <= 1, start = 1)
     @variable(nlp, 0 <= θ[i = 1:N] <= π, start = i * π / (N - 1) - π / (N - 1))
 
@@ -26,6 +26,6 @@ function COPSBenchmark.polygon_model(::JuMPBackend, n::Int)
         end
     end
 
-    @objective(nlp, Min, -0.5 * sum(r[i] * r[i + 1] * sin(θ[i + 1] - θ[i]) for i = 1:(N - 1)))
+    @objective(nlp, Min, sum(COPSBenchmark.polygon_area_term(r[i], r[i+1], θ[i], θ[i+1]) for i = 1:(N - 1)))
     return nlp
 end

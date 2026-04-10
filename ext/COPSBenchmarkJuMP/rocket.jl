@@ -5,19 +5,15 @@
 # COPS 3.1 - March 2004
 
 function COPSBenchmark.rocket_model(::JuMPBackend, nh)
-    h_0 = 1.0
-    v_0 = 0.0
-    m_0 = 1.0
-    g_0 = 1.0
-    T_c = 3.5
-    h_c = 500.0
-    v_c = 620.0
-    m_c = 0.6
-
-    c = 0.5*sqrt(g_0 * h_0)
-    m_f = m_c * m_0
-    D_c = 0.5 * v_c * (m_0 / g_0)
-    T_max = T_c * m_0 * g_0
+    h_0   = COPSBenchmark.rocket_h_0
+    v_0   = COPSBenchmark.rocket_v_0
+    m_0   = COPSBenchmark.rocket_m_0
+    g_0   = COPSBenchmark.rocket_g_0
+    h_c   = COPSBenchmark.rocket_h_c
+    c     = COPSBenchmark.rocket_c
+    m_f   = COPSBenchmark.rocket_m_f
+    D_c   = COPSBenchmark.rocket_D_c
+    T_max = COPSBenchmark.rocket_T_max
 
     model = Model()
 
@@ -39,13 +35,11 @@ function COPSBenchmark.rocket_model(::JuMPBackend, nh)
 
     @objective(model, Max, h[nh])
 
-    # Dynamics
     @constraints(model, begin
         con_dh[i=1:nh], h[i] == h[i-1] + 0.5 * step * (dh[i] + dh[i-1])
         con_dv[i=1:nh], v[i] == v[i-1] + 0.5 * step * (dv[i] + dv[i-1])
         con_dm[i=1:nh], m[i] == m[i-1] + 0.5 * step * (dm[i] + dm[i-1])
     end)
-    # Boundary constraints
     @constraints(model, begin
         h_ic, h[0] == h_0
         v_ic, v[0] == v_0
@@ -55,4 +49,3 @@ function COPSBenchmark.rocket_model(::JuMPBackend, nh)
 
     return model
 end
-

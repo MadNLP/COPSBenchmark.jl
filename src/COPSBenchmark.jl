@@ -42,4 +42,22 @@ function transition_state_model end
 
 include("pde_utils.jl")
 
+include("pinene.jl")
+include("gasoil.jl")
+include("methanol.jl")
+include("marine.jl")
+include("catmix.jl")
+include("channel.jl")
+include("rocket.jl")
+include("steering.jl")
+include("glider.jl")
+include("robot.jl")
+include("camshape.jl")
+include("chain.jl")
+include("elec.jl")
+include("polygon.jl")
+include("bearing.jl")
+include("minsurf.jl")
+include("torsion.jl")
+
 end # module COPSBenchmark

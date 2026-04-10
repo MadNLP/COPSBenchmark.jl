@@ -26,7 +26,7 @@ include(joinpath(@__DIR__, "..", "..", "data", "tetra.jl"))
 
     c = ExaModels.ExaCore(T; backend = backend)
 
-    ExaModels.@var(c, x, n; lvar = lvar, uvar = uvar, start = x0)
+    ExaModels.@add_variable(c, x, n; lvar = lvar, uvar = uvar, start = x0)
 
     # Precompute iteration data: (e, t0, t1, t2, t3) for each element
     itr = [(e, TETS[e], TETS[e + E], TETS[e + 2 * E], TETS[e + 3 * E]) for e in 1:E]
@@ -35,7 +35,7 @@ include(joinpath(@__DIR__, "..", "..", "data", "tetra.jl"))
     # numerator = sum_i=0:2 ( (x[t1+N*i]-x[t0+N*i])^2 + (2*x[t2+N*i]-x[t1+N*i]-x[t0+N*i])^2/3
     #                        + (3*x[t3+N*i]-x[t2+N*i]-x[t1+N*i]-x[t0+N*i])^2/6 )
     # denominator = 3 * ( sum_i=0:2 (x[t1+N*i]-x[t0+N*i]) * cross_component * sqrt(2) )^(2/3)
-    ExaModels.@obj(c,
+    ExaModels.@add_objective(c,
         (
             (x[t1] - x[t0])^2 + (2*x[t2] - x[t1] - x[t0])^2/3 + (3*x[t3] - x[t2] - x[t1] - x[t0])^2/6 +
             (x[t1+N] - x[t0+N])^2 + (2*x[t2+N] - x[t1+N] - x[t0+N])^2/3 + (3*x[t3+N] - x[t2+N] - x[t1+N] - x[t0+N])^2/6 +
@@ -51,7 +51,7 @@ include(joinpath(@__DIR__, "..", "..", "data", "tetra.jl"))
     )
 
     # Constraint: volume >= τ for each element
-    ExaModels.@con(c, c1,
+    ExaModels.@add_constraint(c, c1,
         (x[t1] - x[t0]) * ((x[t2+N] - x[t0+N])*(x[t3+2*N] - x[t0+2*N]) - (x[t2+2*N] - x[t0+2*N])*(x[t3+N] - x[t0+N])) * sqrt(2) +
         (x[t1+N] - x[t0+N]) * ((x[t2+2*N] - x[t0+2*N])*(x[t3] - x[t0]) - (x[t2] - x[t0])*(x[t3+2*N] - x[t0+2*N])) * sqrt(2) +
         (x[t1+2*N] - x[t0+2*N]) * ((x[t2] - x[t0])*(x[t3+N] - x[t0+N]) - (x[t2+N] - x[t0+N])*(x[t3] - x[t0])) * sqrt(2)

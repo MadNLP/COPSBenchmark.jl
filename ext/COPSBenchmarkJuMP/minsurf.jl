@@ -14,10 +14,7 @@
 function COPSBenchmark.minsurf_model(::JuMPBackend, nx::Int, ny::Int)
     x_mesh = LinRange(0, 1, nx + 2) # coordinates of the mesh points x
 
-    v0 = zeros(nx + 2, ny + 2) # Surface matrix initialization
-    for i = 1:(nx + 2), j = 1:(ny + 2)
-        v0[i, j] = 1 - (2 * x_mesh[i] - 1)^2
-    end
+    v0 = [COPSBenchmark.minsurf_v0(x_mesh, i, j) for i = 1:(nx + 2), j = 1:(ny + 2)]
 
     hx = 1 / (nx + 1)
     hy = 1 / (ny + 1)

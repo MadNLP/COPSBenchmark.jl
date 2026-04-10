@@ -4,19 +4,12 @@
 # COPS 3.1 - March 2004
 
 function COPSBenchmark.catmix_model(::JuMPBackend, nh)
-    ne = 2
-    nc = 3
-
-    tf = 1
-    h = tf / nh   # Final time
-
-    rho = [
-        0.11270166537926,
-        0.50000000000000,
-        0.88729833462074,
-    ]
-    bc = [1.0, 0.0]  # Boundary conditions for x
-    alpha = 0.0      # Smoothing parameter
+    ne    = COPSBenchmark.catmix_ne
+    nc    = COPSBenchmark.catmix_nc
+    rho   = COPSBenchmark.catmix_rho
+    bc    = COPSBenchmark.catmix_bc
+    alpha = COPSBenchmark.catmix_alpha
+    h     = COPSBenchmark.catmix_tf / nh
 
     model = Model()
     @variable(model, 0.0 <= u[i=1:nh, j=1:nc] <= 1.0, start=0.0)
@@ -59,12 +52,12 @@ function COPSBenchmark.catmix_model(::JuMPBackend, nh)
     @constraint(
         model,
         de1[i=1:nh, j=1:nc],
-        Dpp[i,j,1] == u[i,j] * (10.0*pp[i,j,2] - pp[i,j,1]),
+        Dpp[i,j,1] == COPSBenchmark.catmix_ode1(u[i,j], pp[i,j,1], pp[i,j,2]),
     )
     @constraint(
         model,
         de2[i=1:nh, j=1:nc],
-        Dpp[i,j,2] == u[i,j] * (pp[i,j,1] - 10.0*pp[i,j,2]) - (1 - u[i,j])*pp[i,j,2]
+        Dpp[i,j,2] == COPSBenchmark.catmix_ode2(u[i,j], pp[i,j,1], pp[i,j,2])
     )
     @constraint(model, b_eqn[s=1:ne], v[1, s] == bc[s])
 

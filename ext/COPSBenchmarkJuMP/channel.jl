@@ -6,24 +6,13 @@
 # COPS 3.1 - March 2004
 
 function COPSBenchmark.channel_model(::JuMPBackend, nh)
-    nc = 4
-    nd = 4
-    R = 10.0 # Reynolds number
-    tf = 1.0
-    h = tf / nh
+    nc  = COPSBenchmark.channel_nc
+    nd  = COPSBenchmark.channel_nd
+    R   = COPSBenchmark.channel_R
+    bc  = COPSBenchmark.channel_bc
+    rho = COPSBenchmark.channel_rho
 
-    bc = [0.0 1.0; 0.0 0.0]
-    rho = [0.06943184420297, 0.33000947820757, 0.66999052179243, 0.93056815579703]
-    t = [(i-1)*h for i in 1:nh+1]
-
-    # Initial value
-    v0 = zeros(nh, nd)
-    for i in 1:nh
-        v0[i, 1] = t[i]^2*(3.0 - 2.0*t[i])
-        v0[i, 2] = 6*t[i]*(1.0 - t[i])
-        v0[i, 3] = 6*(1.0 - 2.0*t[i])
-        v0[i, 4] = -12.0
-    end
+    (; h, v0) = COPSBenchmark.channel_v0(nh)
 
     model = Model()
 
@@ -73,7 +62,7 @@ function COPSBenchmark.channel_model(::JuMPBackend, nh)
         model,
         collocation[i=1:nh, j=1:nc],
         sum(w[i, k] * (rho[j]^(k-1)/factorial(k-1)) for k in 1:nc) ==
-        R * (Duc[i, j, 2] * Duc[i, j, 3] - Duc[i, j, 1] * Duc[i, j, 4])
+        COPSBenchmark.channel_collocation_rhs(R, Duc[i, j, 1], Duc[i, j, 2], Duc[i, j, 3], Duc[i, j, 4])
     )
 
     return model

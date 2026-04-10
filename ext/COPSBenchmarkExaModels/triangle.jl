@@ -24,7 +24,7 @@ include(joinpath(@__DIR__, "..", "..", "data", "triangle.jl"))
 
     c = ExaModels.ExaCore(T; backend = backend)
 
-    ExaModels.@var(c, x, n; lvar = lvar, uvar = uvar, start = x0)
+    ExaModels.@add_variable(c, x, n; lvar = lvar, uvar = uvar, start = x0)
 
     # Precompute iteration data: (e, t0, t1, t2) for each element
     itr = [(e, TRIS[e], TRIS[e + E], TRIS[e + 2 * E]) for e in 1:E]
@@ -32,7 +32,7 @@ include(joinpath(@__DIR__, "..", "..", "data", "triangle.jl"))
     # Objective: sum over elements of (numerator / denominator)
     # numerator = sum_i ((x[t1+N*i] - x[t0+N*i])^2 + (2*x[t2+N*i] - x[t1+N*i] - x[t0+N*i])^2/3 for i=0:1)
     # denominator = 2 * (2 * ((x[t1]-x[t0])*(x[t2+N]-x[t0+N]) - (x[t2]-x[t0])*(x[t1+N]-x[t0+N])) / sqrt(3))
-    ExaModels.@obj(c,
+    ExaModels.@add_objective(c,
         ((x[t1] - x[t0])^2 + (2*x[t2] - x[t1] - x[t0])^2/3 +
          (x[t1+N] - x[t0+N])^2 + (2*x[t2+N] - x[t1+N] - x[t0+N])^2/3) /
         (2 * 2 * ((x[t1]-x[t0])*(x[t2+N]-x[t0+N]) - (x[t2]-x[t0])*(x[t1+N]-x[t0+N])) / sqrt(3))
@@ -40,7 +40,7 @@ include(joinpath(@__DIR__, "..", "..", "data", "triangle.jl"))
     )
 
     # Constraint: area >= τ for each element
-    ExaModels.@con(c, c1,
+    ExaModels.@add_constraint(c, c1,
         2 * ((x[t1]-x[t0])*(x[t2+N]-x[t0+N]) - (x[t2]-x[t0])*(x[t1+N]-x[t0+N])) / sqrt(3)
         for (e, t0, t1, t2) in itr;
         lcon = τ, ucon = Inf

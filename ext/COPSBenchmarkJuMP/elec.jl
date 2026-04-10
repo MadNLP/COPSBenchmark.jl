@@ -7,8 +7,6 @@
 function COPSBenchmark.elec_model(::JuMPBackend, np)
     Random.seed!(2713)
 
-    # Set the starting point to a quasi-uniform distribution
-    # of electrons on a unit sphere
     theta = (2pi) .* rand(np)
     phi = pi .* rand(np)
 
@@ -20,13 +18,10 @@ function COPSBenchmark.elec_model(::JuMPBackend, np)
     @expression(
         model,
         potential[i=1:np, j=i+1:np],
-        1.0 / sqrt((x[i] - x[j])^2 + (y[i] - y[j])^2 + (z[i] - z[j])^2)
+        COPSBenchmark.elec_coulomb_potential(x[i], y[i], z[i], x[j], y[j], z[j])
     )
-    # Coulomb potential
     @objective(model, Min, sum(potential[i, j] for i in 1:np-1, j in i+1:np))
 
-    # Unit-ball
     @constraint(model, [i=1:np], x[i]^2 + y[i]^2 + z[i]^2 == 1)
     return model
 end
-

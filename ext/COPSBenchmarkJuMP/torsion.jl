@@ -4,13 +4,12 @@
 # COPS 3.1 - March 2004
 
 function COPSBenchmark.torsion_model(::JuMPBackend, nx, ny)
-    c = 5.0
+    c = COPSBenchmark.torsion_c_val
     hx = 1.0 / (nx + 1.0)    # grid spacing
     hy = 1.0 / (ny + 1.0)    # grid spacing
     area = 0.5 * hx * hy     # area of triangle
 
-    # Distance to the boundary.
-    D = [min(min(i,nx-i+1)*hx, min(j, ny-j+1)*hy) for i in 0:nx+1, j in 0:ny+1]
+    D = COPSBenchmark.torsion_D(nx, ny)
 
     model = Model()
     # v defines the finite element approximation.

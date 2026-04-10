@@ -6,16 +6,12 @@
 # COPS 3.1 - March 2004
 
 function COPSBenchmark.robot_model(::JuMPBackend, nh)
-    # total length of arm
-    L = 5.0
-
-    # Upper bounds on the controls
-    max_u_rho = 1.0
-    max_u_the = 1.0
-    max_u_phi = 1.0
-    # Initial positions of the length and the angles for the robot arm
-    rho0 = 4.5
-    phi0 = pi /4
+    L         = COPSBenchmark.robot_L
+    max_u_rho = COPSBenchmark.robot_max_u_rho
+    max_u_the = COPSBenchmark.robot_max_u_the
+    max_u_phi = COPSBenchmark.robot_max_u_phi
+    rho0      = COPSBenchmark.robot_rho0
+    phi0      = COPSBenchmark.robot_phi0
 
     model = Model()
 
@@ -34,14 +30,12 @@ function COPSBenchmark.robot_model(::JuMPBackend, nh)
 
     @objective(model, Min, tf)
 
-    # Physical equations
     @expressions(model, begin
-        step,            tf /nh
+        step,             tf / nh
         I_the[i=1:nh+1], ((L-rho[i])^3+rho[i]^3)*(sin(phi[i]))^2/3.0
         I_phi[i=1:nh+1], ((L-rho[i])^3+rho[i]^3)/3.0
     end)
 
-    # Dynamics
     @constraints(model, begin
         [j=2:nh+1], rho[j] == rho[j-1] + 0.5 * step * (rho_dot[j] + rho_dot[j-1])
         [j=2:nh+1], phi[j] == phi[j-1] + 0.5 * step * (phi_dot[j] + phi_dot[j-1])
@@ -51,7 +45,6 @@ function COPSBenchmark.robot_model(::JuMPBackend, nh)
         [j=2:nh+1], phi_dot[j] == phi_dot[j-1] + 0.5 * step * (u_phi[j] / I_phi[j] + u_phi[j-1] / I_phi[j-1])
     end)
 
-    # Boundary condition
     @constraints(
         model, begin
             rho[1] == 4.5
@@ -71,4 +64,3 @@ function COPSBenchmark.robot_model(::JuMPBackend, nh)
 
     return model
 end
-
