@@ -11,4 +11,4 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [sources]
-ExaModels = {rev = "claude/sync-generated-files-upEXG", url = "https://github.com/exanauts/ExaModels.jl.git"}
+ExaModels = {rev = "main", url = "https://github.com/exanauts/ExaModels.jl"}
