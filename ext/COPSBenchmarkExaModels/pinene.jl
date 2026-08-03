@@ -12,17 +12,18 @@
     nm = 8        # number of measurements
 
     # roots of k-th degree Legendre polynomial
-    rho = [0.11270166537926, 0.5, 0.88729833462074]
+    rho = T[0.11270166537926, 0.5, 0.88729833462074]
     # boundary conditions
-    bc = [100.0, 0.0, 0.0, 0.0, 0.0]
+    bc = T[100, 0, 0, 0, 0]
     # times at which observations made
-    tau = [1230.0, 3060.0, 4920.0, 7800.0, 10680.0, 15030.0, 22620.0, 36420.0]
-    tf = tau[nm]                       # ODEs defined in [0,tf]
-    h = tf / nh                        # uniform interval length
-    t = [(i-1)*h for i in 1:nh+1]      # partition
+    tau = T[1230, 3060, 4920, 7800, 10680, 15030, 22620, 36420]
+    tf = tau[nm]                            # ODEs defined in [0,tf]
+    h = tf / T(nh)                          # uniform interval length
+    t = T[T(i-1)*h for i in 1:nh+1]         # partition
+    zero_T = T(0)
 
     # itau[i] is the largest integer k with t[k] <= tau[i]
-    itau = Int[min(nh, floor(tau[i]/h)+1) for i in 1:nm]
+    itau = Int[min(nh, Int(floor(tau[i]/h))+1) for i in 1:nm]
 
     # Observations
     z = reshape(T[
@@ -36,7 +37,7 @@
         4.5,  63.1,  3.8,  2.9, 25.7,
     ], ne, nm)'
 
-    v0 = zeros(nh, ne)
+    v0 = zeros(T, nh, ne)
     # Starting-value
     for i in 1:itau[1], s in 1:ne
         v0[i, s] = bc[s]
@@ -50,30 +51,30 @@
 
     core = ExaModels.ExaCore(T; backend= backend, concrete = Val(true))
 
-    ExaModels.@add_var(core, theta, 1:np; lvar = 0.0, start=0.0)
+    ExaModels.@add_var(core, theta, 1:np; lvar = zero_T, start=zero_T)
     # The collocation approximation u is defined by the parameters v and w.
     # uc and Duc are, respectively, u and u' evaluated at the collocation points.
     ExaModels.@add_var(core, v, 1:nh, 1:ne; start=[v0[i, s] for i=1:nh, s=1:ne])
-    ExaModels.@add_var(core, w, 1:nh, 1:nc, 1:ne; start=0.0)
+    ExaModels.@add_var(core, w, 1:nh, 1:nc, 1:ne; start=zero_T)
     ExaModels.@add_var(core, uc, 1:nh, 1:nc, 1:ne; start=[v0[i,s] for i=1:nh, j=1:nc, s=1:ne])
-    ExaModels.@add_var(core, Duc, 1:nh, 1:nc, 1:ne; start=0.0)
+    ExaModels.@add_var(core, Duc, 1:nh, 1:nc, 1:ne; start=zero_T)
 
     itr = [(j, s, itau[j], tau[j], t[itau[j]], z[j,s]) for j=1:nm, s in 1:ne]
     # l2 error
-    ExaModels.@add_obj(core, (v[it,s] + sum(w[it,k,s]*(tj-ti)^k/(factorial(k)*h^(k-1)) for k in 1:nc) - zjs)^2 for (j, s, it, tj, ti, zjs) in itr)
+    ExaModels.@add_obj(core, (v[it,s] + sum(w[it,k,s]*(tj-ti)^k/(T(factorial(k))*h^(k-1)) for k in 1:nc) - zjs)^2 for (j, s, it, tj, ti, zjs) in itr)
 
     # Collocation model
     itr2 = [(j,rho[j]) for j=1:nc]
     ExaModels.@add_con(
         core,
         c1,
-        - uc[i, j, s] + v[i,s] + h*sum(w[i,k,s]*(rhoj^k/factorial(k)) for k in 1:nc)
+        - uc[i, j, s] + v[i,s] + h*sum(w[i,k,s]*(rhoj^k/T(factorial(k))) for k in 1:nc)
         for i=1:nh, (j,rhoj) in itr2, s=1:ne
     )
     ExaModels.@add_con(
         core,
         c2,
-        - Duc[i, j, s] + sum(w[i,k,s]*(rhoj^(k-1)/factorial(k-1)) for k in 1:nc)
+        - Duc[i, j, s] + sum(w[i,k,s]*(rhoj^(k-1)/T(factorial(k-1))) for k in 1:nc)
         for i=1:nh, (j,rhoj) in itr2, s=1:ne
     )
     # Boundary
@@ -82,7 +83,7 @@
     ExaModels.@add_con(
         core,
         c4,
-        v[i, s] + sum(w[i, j, s]*h/factorial(j) for j in 1:nc) - v[i+1, s]
+        v[i, s] + sum(w[i, j, s]*h/T(factorial(j)) for j in 1:nc) - v[i+1, s]
         for i=1:nh-1, s=1:ne
     )
     ExaModels.@add_con(core, c5, -Duc[i,j,1] - (theta[1]+theta[2])*uc[i,j,1] for i=1:nh, j=1:nc)
@@ -93,5 +94,3 @@
 
     return ExaModels.ExaModel(core; kwargs...)
 end
-
-

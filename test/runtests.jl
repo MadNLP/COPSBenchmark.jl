@@ -135,8 +135,8 @@ end
     @test m == get_ncon(exa_model)
 
     # Find variable permutation by matching (lvar, uvar, x0) tuples
-    lj, uj, x0j = get_lvar(jump_nlp), get_uvar(jump_nlp), jump_nlp.meta.x0
-    le, ue, x0e = get_lvar(exa_model), get_uvar(exa_model), exa_model.meta.x0
+    lj, uj, x0j = NLPModels.get_lvar(jump_nlp), NLPModels.get_uvar(jump_nlp), jump_nlp.meta.x0
+    le, ue, x0e = NLPModels.get_lvar(exa_model), NLPModels.get_uvar(exa_model), exa_model.meta.x0
     var_keys_j = collect(zip(lj, uj, x0j))
     var_keys_e = collect(zip(le, ue, x0e))
     Pv = find_permutation(var_keys_j, var_keys_e)
@@ -157,8 +157,8 @@ end
     @test obj(jump_nlp, x0j) ≈ obj(exa_model, x0e) rtol = 1e-6
 
     # Find constraint permutation
-    lcj, ucj = get_lcon(jump_nlp), get_ucon(jump_nlp)
-    lce, uce = get_lcon(exa_model), get_ucon(exa_model)
+    lcj, ucj = NLPModels.get_lcon(jump_nlp), NLPModels.get_ucon(jump_nlp)
+    lce, uce = NLPModels.get_lcon(exa_model), NLPModels.get_ucon(exa_model)
     cj0 = cons(jump_nlp, x0j)
     ce0 = cons(exa_model, x0e)
     con_keys_j = collect(zip(lcj, ucj, cj0))

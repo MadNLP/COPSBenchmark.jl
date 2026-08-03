@@ -10,14 +10,15 @@
     ne = 8     # number of differential equations
     nm = 21    # number of measurements
 
-    rho = [0.5]                            # roots of k-th degree Legendre polynomial
-    tau = collect(range(0.0, 10.0, 21))    # times at which observations made
-    tf = tau[nm]                           # ODEs defined in [0,tf]
-    h = tf / nh                            # uniform interval length
-    t = [(i-1)*h for i in 1:nh+1]          # partition
+    rho = T[0.5]                                  # roots of k-th degree Legendre polynomial
+    tau = collect(T, range(T(0), T(10), 21))      # times at which observations made
+    tf = tau[nm]                                  # ODEs defined in [0,tf]
+    h = tf / T(nh)                                # uniform interval length
+    t = T[T(i-1)*h for i in 1:nh+1]               # partition
+    zero_T = T(0)
 
     # itau[i] is the largest integer k with t[k] <= tau[i]
-    itau = Int[min(nh, floor(tau[i]/h)+1) for i in 1:nm]
+    itau = Int[min(nh, Int(floor(tau[i]/h))+1) for i in 1:nm]
 
     # Observation
     z = reshape(T[
@@ -44,7 +45,7 @@
         1.0,    12.0,   198.0,   707.0,  2562.0,  3163.0,  3232.0,  5566.0,
     ], ne, nm)'
 
-    v0 = zeros(nh, ne)
+    v0 = zeros(T, nh, ne)
     # Starting-value
     for i in 1:itau[1], s in 1:ne
         v0[i, s] = z[1, s]
@@ -59,15 +60,15 @@
     core = ExaModels.ExaCore(T; backend= backend, concrete = Val(true))
 
     # Growth rates
-    ExaModels.@add_var(core, g, 1:ne-1; lvar =  0.0)
+    ExaModels.@add_var(core, g, 1:ne-1; lvar = zero_T)
     # Mortality rates
-    ExaModels.@add_var(core, m, 1:ne; lvar = 0.0)
+    ExaModels.@add_var(core, m, 1:ne; lvar = zero_T)
     # The collocation approximation u is defined by the parameters v and w.
     # uc and Duc are, respectively, u and u' evaluated at the collocation points.
     ExaModels.@add_var(core, v, 1:nh, 1:ne; start=[v0[i, s] for i=1:nh, s=1:ne])
-    ExaModels.@add_var(core, w, 1:nh, 1:nc, 1:ne; start=0.0)
+    ExaModels.@add_var(core, w, 1:nh, 1:nc, 1:ne; start=zero_T)
     ExaModels.@add_var(core, uc, 1:nh, 1:nc, 1:ne; start=[v0[i, s] for i=1:nh, s=1:ne])
-    ExaModels.@add_var(core, Duc, 1:nh, 1:nc, 1:ne; start=0.0)
+    ExaModels.@add_var(core, Duc, 1:nh, 1:nc, 1:ne; start=zero_T)
 
     # error
 
@@ -76,26 +77,26 @@
     itr = [(j, s, itau[j], tau[j], t[itau[j]], z[j,s]) for j=1:nm, s in 1:ne]
     itr2 = [(j,rho[j]) for j=1:nc]
 
-    ExaModels.@add_obj(core, (v[itauj,s] + sum(w[itauj,k,s]*(tauj-tj)^k/(factorial(k)*h^(k-1)) for k in 1:nc) - zjs)^2 for (j,s,itauj,tauj, tj, zjs) in itr)
+    ExaModels.@add_obj(core, (v[itauj,s] + sum(w[itauj,k,s]*(tauj-tj)^k/(T(factorial(k))*h^(k-1)) for k in 1:nc) - zjs)^2 for (j,s,itauj,tauj, tj, zjs) in itr)
 
     # Collocation model
     ExaModels.@add_con(
         core,
         c1,
-        - uc[i, j, s] + v[i,s] + h*sum(w[i,k,s]*(rhoj^k/factorial(k)) for k in 1:nc)
+        - uc[i, j, s] + v[i,s] + h*sum(w[i,k,s]*(rhoj^k/T(factorial(k))) for k in 1:nc)
         for i=1:nh, (j,rhoj) in itr2, s=1:ne
     )
     ExaModels.@add_con(
         core,
         c2,
-        - Duc[i, j, s] + sum(w[i,k,s]*(rhoj^(k-1)/factorial(k-1)) for k in 1:nc)
+        - Duc[i, j, s] + sum(w[i,k,s]*(rhoj^(k-1)/T(factorial(k-1))) for k in 1:nc)
         for i=1:nh, (j,rhoj) in itr2, s=1:ne
     )
     # Continuity
     ExaModels.@add_con(
         core,
         c3,
-        v[i, s] + sum(w[i, j, s]*h/factorial(j) for j in 1:nc) - v[i+1, s]
+        v[i, s] + sum(w[i, j, s]*h/T(factorial(j)) for j in 1:nc) - v[i+1, s]
         for i=1:nh-1, s=1:ne
     )
     # Boundary conditions
@@ -121,5 +122,3 @@
 
     return ExaModels.ExaModel(core; kwargs...)
 end
-
-

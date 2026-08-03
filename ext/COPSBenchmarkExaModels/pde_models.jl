@@ -1,6 +1,12 @@
 
 @inline function COPSBenchmark.transition_state_model(::ExaModelsBackend, problem, dom::COPSBenchmark.PDEDiscretizationDomain; T = Float64, backend = nothing, kwargs...)
     a, b, c, d, p = problem.a, problem.b, problem.c, problem.d, problem.p
+    # Precompute T-typed constants so the kernel expressions stay fp32-clean:
+    # the scalar `a` and the integer divisors `/2`, `1/(DIMEN+1)` would
+    # otherwise inject Float64 into the GPU AD kernels.
+    aT = T(a)
+    half = T(1) / T(2)
+    inv_dim = T(1) / T(dom.DIMEN + 1)
     x0 = COPSBenchmark._initial_position!(problem, dom, 10)
     array1 = [
         (
@@ -75,7 +81,7 @@
         core,
         c3,
         AREA*(
-            a / (8*AREA^2)*(
+            aT / (8*AREA^2)*(
                 u[b1,TRIANG1]^2*(EDGE_21^2 + EDGE_22^2) +
                 u[b1,TRIANG2]^2*(EDGE_31^2 + EDGE_32^2) +
                 u[b1,TRIANG3]^2*(EDGE_11^2 + EDGE_12^2) +
@@ -91,8 +97,8 @@
     ExaModels.@add_con!(
         core,
         c3,
-        (b1, e1) => AREA* 1 / (dom.DIMEN+1) *
-                    (b*u[b1,TRIANG]^2/2- c*u[b1,TRIANG]^(p+1)/(p+1)+ d*u[b1, TRIANG])
+        (b1, e1) => AREA * inv_dim *
+                    (b*u[b1,TRIANG]^2*half - c*u[b1,TRIANG]^(p+1)/(p+1)+ d*u[b1, TRIANG])
                     for b1 in 1:dom.BREAK+2, (e1, AREA, b, c, d, p, TRIANG) in array2
     )
 

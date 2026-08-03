@@ -11,9 +11,9 @@
     nc = 3
     nm = 17
 
-    rho = [0.11270166537926, 0.5, 0.88729833462074]
+    rho = T[0.11270166537926, 0.5, 0.88729833462074]
     # times at which observations made
-    tau = [
+    tau = T[
         0.,
         0.050,
         0.065,
@@ -32,12 +32,14 @@
         0.937,
         1.122,
     ]
-    tf = tau[nm]                   # ODEs defined in [0,tf]
-    h = tf / nh                    # uniform interval length
-    t = [(i-1)*h for i in 1:nh+1]  # partition
+    tf = tau[nm]                          # ODEs defined in [0,tf]
+    h = tf / T(nh)                        # uniform interval length
+    t = T[T(i-1)*h for i in 1:nh+1]       # partition
+    zero_T = T(0)
+    two_T = T(2)
 
     # itau[i] is the largest integer k with t[k] <= tau[i]
-    itau = Int[min(nh, floor(tau[i]/h)+1) for i in 1:nm]
+    itau = Int[min(nh, Int(floor(tau[i]/h))+1) for i in 1:nm]
 
     # Concentrations
     z = reshape(T[
@@ -60,10 +62,10 @@
         0.0006, 0.3698, 0.2899,
     ], ne, nm)'
     con1_matrix = [(j, s, itau[j], tau[j], z[j,s], t[itau[j]]) for j in 1:nm, s in 1:ne]
-    bc = [1.0, 0.0, 0.0]
+    bc = T[1, 0, 0]
 
     # Starting-value
-    v0 = zeros(nh, ne)
+    v0 = zeros(T, nh, ne)
     for i in 1:itau[1], s in 1:ne
         v0[i, s] = bc[s]
     end
@@ -73,27 +75,27 @@
     for i in itau[nm]+1:nh, s in 1:ne
         v0[i, s] = z[nm, s]
     end
-    v0 .= 0.001
+    v0 .= T(0.001)
 
     c = ExaModels.ExaCore(T; backend = backend, concrete = Val(true))
-    ExaModels.@add_var(c, theta, np; lvar = 0, start = fill(1, np))
+    ExaModels.@add_var(c, theta, np; lvar = zero_T, start = fill(T(1), np))
     ExaModels.@add_var(c, v, nh, ne; start = v0)
-    ExaModels.@add_var(c, w, nh, nc, ne; start = 0)
+    ExaModels.@add_var(c, w, nh, nc, ne; start = zero_T)
     ExaModels.@add_var(c, uc, nh, nc, ne; start = [v0[i,s] for i=1:nh, j=1:nc, s=1:ne])
-    ExaModels.@add_var(c, Duc, nh, nc, ne; start = 0)
+    ExaModels.@add_var(c, Duc, nh, nc, ne; start = zero_T)
 
-    ExaModels.@add_obj(c, (v[itau,s] + sum(w[itau,k,s]*(tau-t)^k/(factorial(k)*h^(k-1)) for k in 1:nc) - z)^2 for (j,s,itau,tau,z,t) in con1_matrix)
+    ExaModels.@add_obj(c, (v[itau,s] + sum(w[itau,k,s]*(tau-t)^k/(T(factorial(k))*h^(k-1)) for k in 1:nc) - z)^2 for (j,s,itau,tau,z,t) in con1_matrix)
 
     ExaModels.@add_con(
         c,
         c1,
-        uc[i, j, s] - v[i,s] - h*sum(w[i,k,s]*(rho^k/factorial(k)) for k in 1:nc) for i=1:nh, (j,rho) in [(j, rho[j]) for j in 1:nc], s=1:ne
+        uc[i, j, s] - v[i,s] - h*sum(w[i,k,s]*(rho^k/T(factorial(k))) for k in 1:nc) for i=1:nh, (j,rho) in [(j, rho[j]) for j in 1:nc], s=1:ne
     )
 
     ExaModels.@add_con(
         c,
         c2,
-        Duc[i, j, s] - sum(w[i,k,s]*(rho^(k-1)/factorial(k-1)) for k in 1:nc) for i=1:nh, (j,rho) in [(j, rho[j]) for j in 1:nc], s=1:ne
+        Duc[i, j, s] - sum(w[i,k,s]*(rho^(k-1)/T(factorial(k-1))) for k in 1:nc) for i=1:nh, (j,rho) in [(j, rho[j]) for j in 1:nc], s=1:ne
     )
 
     ExaModels.@add_con(
@@ -106,13 +108,13 @@
     ExaModels.@add_con(
         c,
         c4,
-        v[i, s] + sum(w[i, j, s]*h/factorial(j) for j in 1:nc) - v[i+1, s] for i=1:nh-1, s=1:ne
+        v[i, s] + sum(w[i, j, s]*h/T(factorial(j)) for j in 1:nc) - v[i+1, s] for i=1:nh-1, s=1:ne
     )
 
     ExaModels.@add_con(
         c,
         c5,
-        Duc[i,j,1] + ((2*theta[2] - (theta[1]*uc[i,j,2])/((theta[2]+theta[5])*uc[i,j,1]+uc[i,j,2]) +
+        Duc[i,j,1] + ((two_T*theta[2] - (theta[1]*uc[i,j,2])/((theta[2]+theta[5])*uc[i,j,1]+uc[i,j,2]) +
                          theta[3] + theta[4])*uc[i,j,1]) for i=1:nh, j=1:nc
     )
 
