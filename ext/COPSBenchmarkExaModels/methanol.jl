@@ -134,3 +134,121 @@
 
     return ExaModels.ExaModel(c; kwargs...)
 end
+
+function COPSBenchmark.methanol_core()
+    args = ExaModels.ArgTracer()
+    ne = 3
+    np = 5
+    nc = 3
+    nm = 17
+
+    rho = [0.11270166537926, 0.5, 0.88729833462074]
+    tau = [
+        0.,
+        0.050,
+        0.065,
+        0.080,
+        0.123,
+        0.233,
+        0.273,
+        0.354,
+        0.397,
+        0.418,
+        0.502,
+        0.553,
+        0.681,
+        0.750,
+        0.916,
+        0.937,
+        1.122,
+    ]
+    tf = tau[nm]
+    h = tf / args.nh
+    zero_T = 0.0
+    two_T = 2.0
+
+    z = reshape([
+        1.0000, 0.0000, 0.0000,
+        0.7085, 0.1621, 0.0811,
+        0.5971, 0.1855, 0.0965,
+        0.5537, 0.1989, 0.1198,
+        0.3684, 0.2845, 0.1535,
+        0.1712, 0.3491, 0.2097,
+        0.1198, 0.3098, 0.2628,
+        0.0747, 0.3576, 0.2467,
+        0.0529, 0.3347, 0.2884,
+        0.0415, 0.3388, 0.2757,
+        0.0261, 0.3557, 0.3167,
+        0.0208, 0.3483, 0.2954,
+        0.0085, 0.3836, 0.2950,
+        0.0053, 0.3611, 0.2937,
+        0.0019, 0.3609, 0.2831,
+        0.0018, 0.3485, 0.2846,
+        0.0006, 0.3698, 0.2899,
+    ], ne, nm)'
+    con1_matrix = Deferred(a -> begin
+        h = tf / a.nh
+        t = [(i-1)*h for i in 1:a.nh+1]
+        itau = Int[min(a.nh, Int(floor(tau[i]/h))+1) for i in 1:nm]
+        [(j, s, itau[j], tau[j], z[j,s], t[itau[j]]) for j in 1:nm, s in 1:ne]
+    end)
+    bc = [1.0, 0.0, 0.0]
+
+    # Starting-value: the eager fills v0 from itau then overwrites it all
+    # with 0.001 (methanol.jl:78) — replayed verbatim in the Deferred.
+    _v0 = a -> begin
+        h = tf / a.nh
+        itau = Int[min(a.nh, Int(floor(tau[i]/h))+1) for i in 1:nm]
+        v0 = zeros(a.nh, ne)
+        for i in 1:itau[1], s in 1:ne
+            v0[i, s] = bc[s]
+        end
+        for j in 2:nm, i in itau[j-1]+1:itau[j], s in 1:ne
+            v0[i, s] = z[j, s]
+        end
+        for i in itau[nm]+1:a.nh, s in 1:ne
+            v0[i, s] = z[nm, s]
+        end
+        v0 .= 0.001
+        v0
+    end
+
+    c = ExaCore(concrete = Val(true))
+    c, theta = add_var(c, np; lvar = zero_T, start = fill(1.0, np))
+    c, v = add_var(c, args.nh, ne; start = Deferred(a -> _v0(a)))
+    c, w = add_var(c, args.nh, nc, ne; start = zero_T)
+    c, uc = add_var(c, args.nh, nc, ne;
+        start = Deferred(a -> begin v0 = _v0(a); [v0[i,s] for i = 1:a.nh, j = 1:nc, s = 1:ne] end))
+    c, Duc = add_var(c, args.nh, nc, ne; start = zero_T)
+
+    c, _ = add_obj(c,
+        (v[itau,s] + sum(w[itau,k,s]*(tau-t)^k/(factorial(k)*h^(k-1)) for k in 1:nc) - z)^2
+        for (j, s, itau, tau, z, t) in con1_matrix)
+
+    c, _ = add_con(c,
+        uc[i, j, s] - v[i,s] - h*sum(w[i,k,s]*(rho^k/factorial(k)) for k in 1:nc)
+        for i = 1:args.nh, (j, rho) in [(j, rho[j]) for j in 1:nc], s = 1:ne)
+
+    c, _ = add_con(c,
+        Duc[i, j, s] - sum(w[i,k,s]*(rho^(k-1)/factorial(k-1)) for k in 1:nc)
+        for i = 1:args.nh, (j, rho) in [(j, rho[j]) for j in 1:nc], s = 1:ne)
+
+    c, _ = add_con(c, v[1, s] - bc for (s, bc) in [(s, bc[s]) for s in 1:ne])
+
+    c, _ = add_con(c,
+        v[i, s] + sum(w[i, j, s]*h/factorial(j) for j in 1:nc) - v[i+1, s]
+        for i = 1:args.nh-1, s = 1:ne)
+
+    c, _ = add_con(c,
+        Duc[i,j,1] + ((two_T*theta[2] - (theta[1]*uc[i,j,2])/((theta[2]+theta[5])*uc[i,j,1]+uc[i,j,2]) +
+                         theta[3] + theta[4])*uc[i,j,1]) for i = 1:args.nh, j = 1:nc)
+
+    c, _ = add_con(c,
+        Duc[i,j,2] - ((theta[1]*uc[i,j,1]*(theta[2]*uc[i,j,1]-uc[i,j,2]))/ ((theta[2]+theta[5])*uc[i,j,1]+uc[i,j,2]) +
+                     theta[3]*uc[i,j,1]) for i = 1:args.nh, j = 1:nc)
+
+    c, _ = add_con(c,
+        Duc[i,j,3] - ((theta[1]*uc[i,j,1]*(uc[i,j,2]+theta[5]*uc[i,j,1]))/ ((theta[2]+theta[5])*uc[i,j,1]+uc[i,j,2]) +
+                        theta[4]*uc[i,j,1]) for i = 1:args.nh, j = 1:nc)
+    c
+end

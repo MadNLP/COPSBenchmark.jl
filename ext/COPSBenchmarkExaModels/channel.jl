@@ -134,3 +134,130 @@
 
     return ExaModels.ExaModel(core; kwargs...)
 end
+
+function COPSBenchmark.channel_core()
+    args = ExaModels.ArgTracer()
+    nc = 4
+    nd = 4
+    R = 10.0
+    tf = 1.0
+    rho = [0.06943184420297, 0.33000947820757, 0.66999052179243, 0.93056815579703]
+
+    # v0 (channel.jl:20-26): mutating fill over 1:nh from the partition t
+    _v0 = a -> begin
+        h = tf / a.nh
+        t = [(i-1)*h for i in 1:a.nh+1]
+        v0 = zeros(a.nh, nd)
+        for i in 1:a.nh
+            v0[i, 1] = t[i]^2*(3 - 2*t[i])
+            v0[i, 2] = 6*t[i]*(1 - t[i])
+            v0[i, 3] = 6*(1 - 2*t[i])
+            v0[i, 4] = -12
+        end
+        v0
+    end
+
+    # fac[k+1] = k!
+    _fac = [factorial(k) for k in 0:nc+nd]
+
+    con1_itr = Deferred(a -> begin
+        h = tf / a.nh
+        fac = _fac
+        [(i, j, s, h*rho[j]^1/fac[2], h*rho[j]^2/fac[3], h*rho[j]^3/fac[4], h*rho[j]^4/fac[5])
+            for i in 1:a.nh, j in 1:nc, s in 1:nd]
+    end)
+    con2_itr = Deferred(a -> begin
+        h = tf / a.nh
+        fac = _fac
+        [(i, j, s,
+          (s <= 1 ? (rho[j]*h)^(1-s)/fac[1-s+1] : 0.0),
+          (s <= 2 ? (rho[j]*h)^(2-s)/fac[2-s+1] : 0.0),
+          (s <= 3 ? (rho[j]*h)^(3-s)/fac[3-s+1] : 0.0),
+          (s <= 4 ? (rho[j]*h)^(4-s)/fac[4-s+1] : 0.0),
+          h^(nd-s+1)*rho[j]^(1+nd-s)/fac[1+nd-s+1],
+          h^(nd-s+1)*rho[j]^(2+nd-s)/fac[2+nd-s+1],
+          h^(nd-s+1)*rho[j]^(3+nd-s)/fac[3+nd-s+1],
+          h^(nd-s+1)*rho[j]^(4+nd-s)/fac[4+nd-s+1])
+            for i in 1:a.nh, j in 1:nc, s in 1:nd]
+    end)
+    cont_itr = Deferred(a -> begin
+        h = tf / a.nh
+        fac = _fac
+        [(i, s,
+          (s <= 1 ? h^(1-s)/fac[1-s+1] : 0.0),
+          (s <= 2 ? h^(2-s)/fac[2-s+1] : 0.0),
+          (s <= 3 ? h^(3-s)/fac[3-s+1] : 0.0),
+          (s <= 4 ? h^(4-s)/fac[4-s+1] : 0.0),
+          h^(nd-s+1)/fac[1+nd-s+1],
+          h^(nd-s+1)/fac[2+nd-s+1],
+          h^(nd-s+1)/fac[3+nd-s+1],
+          h^(nd-s+1)/fac[4+nd-s+1])
+            for i in 1:a.nh-1, s in 1:nd]
+    end)
+    coll_itr = Deferred(a -> begin
+        fac = _fac
+        [(i, j, rho[j]^0/fac[1], rho[j]^1/fac[2], rho[j]^2/fac[3], rho[j]^3/fac[4])
+            for i in 1:a.nh, j in 1:nc]
+    end)
+    # right-BC coefficient records (channel.jl:79-82), one row each
+    bc3_itr = Deferred(a -> begin
+        h = tf / a.nh
+        fac = _fac
+        cv = [h^(k-1)/fac[k] for k in 1:nd]
+        cw = [h^nd/fac[k+nd] for k in 1:nc]
+        [(cv1 = cv[1], cv2 = cv[2], cv3 = cv[3], cv4 = cv[4],
+          cw1 = cw[1], cw2 = cw[2], cw3 = cw[3], cw4 = cw[4])]
+    end)
+    bc4_itr = Deferred(a -> begin
+        h = tf / a.nh
+        fac = _fac
+        cv = [h^(k-2)/fac[k-1] for k in 2:nd]
+        cw = [h^(nd-1)/fac[k+nd-1] for k in 1:nc]
+        [(cv1 = cv[1], cv2 = cv[2], cv3 = cv[3],
+          cw1 = cw[1], cw2 = cw[2], cw3 = cw[3], cw4 = cw[4])]
+    end)
+
+    core = ExaCore(concrete = Val(true))
+
+    core, v = add_var(core, args.nh, nd; start = Deferred(a -> _v0(a)))
+    core, w = add_var(core, args.nh, nc; start = 0.0)
+    core, uc = add_var(core, args.nh, nc, nd;
+        start = Deferred(a -> begin v0 = _v0(a); [v0[i, s] for i in 1:a.nh, j in 1:nc, s in 1:nd] end))
+    core, Duc = add_var(core, args.nh, nc, nd; start = 0.0)
+
+    # Constant objective
+    core, _ = add_obj(core, 1.0 for _i in 1:1)
+
+    core, _ = add_con(core,
+        uc[i, j, s] - v[i, s] - (a1*w[i,1] + a2*w[i,2] + a3*w[i,3] + a4*w[i,4])
+        for (i, j, s, a1, a2, a3, a4) in con1_itr)
+    core, _ = add_con(core,
+        Duc[i, j, s] - (bv1*v[i,1] + bv2*v[i,2] + bv3*v[i,3] + bv4*v[i,4])
+                     - (bw1*w[i,1] + bw2*w[i,2] + bw3*w[i,3] + bw4*w[i,4])
+        for (i, j, s, bv1, bv2, bv3, bv4, bw1, bw2, bw3, bw4) in con2_itr)
+
+    # Boundary conditions (bc = [0.0 1.0; 0.0 0.0])
+    core, _ = add_con(core, v[1, 1] - 0.0 for _ in 1:1)
+    core, _ = add_con(core, v[1, 2] - 0.0 for _ in 1:1)
+    core, _ = add_con(core,
+        p.cv1*v[args.nh,1] + p.cv2*v[args.nh,2] + p.cv3*v[args.nh,3] + p.cv4*v[args.nh,4] +
+        p.cw1*w[args.nh,1] + p.cw2*w[args.nh,2] + p.cw3*w[args.nh,3] + p.cw4*w[args.nh,4] - 1.0
+        for p in bc3_itr)
+    core, _ = add_con(core,
+        p.cv1*v[args.nh,2] + p.cv2*v[args.nh,3] + p.cv3*v[args.nh,4] +
+        p.cw1*w[args.nh,1] + p.cw2*w[args.nh,2] + p.cw3*w[args.nh,3] + p.cw4*w[args.nh,4] - 0.0
+        for p in bc4_itr)
+
+    # Continuity
+    core, _ = add_con(core,
+        cv1*v[i,1] + cv2*v[i,2] + cv3*v[i,3] + cv4*v[i,4] +
+        cw1*w[i,1] + cw2*w[i,2] + cw3*w[i,3] + cw4*w[i,4] - v[i+1, s]
+        for (i, s, cv1, cv2, cv3, cv4, cw1, cw2, cw3, cw4) in cont_itr)
+
+    # Collocation physics
+    core, _ = add_con(core,
+        e1*w[i,1] + e2*w[i,2] + e3*w[i,3] + e4*w[i,4] -
+        R * (Duc[i, j, 2] * Duc[i, j, 3] - Duc[i, j, 1] * Duc[i, j, 4])
+        for (i, j, e1, e2, e3, e4) in coll_itr)
+    core
+end

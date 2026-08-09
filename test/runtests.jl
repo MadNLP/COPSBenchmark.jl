@@ -234,3 +234,112 @@ end
         @test sort(abs.(eigvals(H_jump))) ≈ sort(abs.(eigvals(H_exa))) atol = 1e-6
     end
 end
+
+# ── Lazy-core construction (all 30 instances) ────────────────────────────────
+# Each `*_core()` builder (in the ExaModels extension) constructs the model
+# once against the ArgTracer size sentinel; ExaModels.ExaModel(core, (; nh = n))
+# materializes it at any size. The builders call the same expressions with the
+# same coefficients, bounds, starts, and add_* order as the direct
+# constructors, so the materialized model must match the direct model exactly.
+# Sparse-assembled Jacobians/Hessians are compared (entry order within the
+# compressed COO is representation-dependent; assembly canonicalizes it).
+# Where a COPS reference objective exists, the materialized model is also
+# solved to convergence against it — before the parity sizes, so the builds
+# that mutate global domain state (the PDE family) meet it in pristine order.
+
+# Extra leading positional args for direct constructors that take prebuilt
+# structures instead of a size (the lazy builder pins the canonical instance).
+core_direct_extra = Dict{String,Function}(
+    "transition_state" => () -> begin
+        dom = COPSBenchmark.PDEDiscretizationDomain(5, COPSBenchmark.CIRCLE_DOMAIN)
+        pb = COPSBenchmark.PDEProblem(0.01, fill(1.0, dom.NODES), fill(1.0, dom.NODES),
+            fill(0.0, dom.NODES), fill(3.0, dom.NODES))
+        (pb, dom)
+    end,
+)
+
+spjac(m, x, ncon, nvar) = begin
+    r, c = jac_structure(m)
+    sparse(r, c, jac_coord(m, x), ncon, nvar)
+end
+sphess(m, x, y, nvar) = begin
+    r, c = hess_structure(m)
+    sparse(r, c, hess_coord(m, x, y), nvar, nvar)
+end
+
+@testset "Core: $name" for (name, sizings, solve_ref) in [
+    # (name, materialization args at two sizes (nothing = fixed-size), (ref args, ref obj) or nothing)
+    ("bearing",     [(nx = 10, ny = 10), (nx = 14, ny = 14)], ((nx = 50, ny = 50), -1.5482e-1)),
+    ("camshape",    [(n = 50,), (n = 100,)],                  ((n = 200,), 4.2791)),
+    ("catmix",      [(nh = 10,), (nh = 20,)],                 ((nh = 100,), -4.80556e-2)),
+    ("chain",       [(n = 64,), (n = 100,)],                  ((n = 800,), 5.06891)),
+    ("channel",     [(nh = 20,), (nh = 40,)],                 ((nh = 100,), 1.0)),
+    ("dirichlet",   [(nh = 10,), (nh = 20,)],                 ((nh = 20,), 1.71464e-2)),
+    ("elec",        [(np = 25,), (np = 40,)],                 ((np = 50,), 1.0552e3)),
+    ("gasoil",      [(nh = 10,), (nh = 20,)],                 ((nh = 100,), 5.2366e-3)),
+    ("glider",      [(nh = 10,), (nh = 20,)],                 ((nh = 100,), -1.25505e3)),
+    ("henon",       [(nh = 6,), (nh = 10,)],                  nothing),  # solve too slow for CI
+    ("lane_emden",  [(nh = 10,), (nh = 20,)],                 nothing),  # solve too slow for CI
+    ("marine",      [(nh = 10,), (nh = 20,)],                 ((nh = 100,), 1.97462e7)),
+    ("methanol",    [(nh = 10,), (nh = 20,)],                 ((nh = 100,), 9.02229e-3)),
+    ("minsurf",     [(nx = 10, ny = 10), (nx = 14, ny = 14)], ((nx = 50, ny = 50), 2.51488)),
+    ("pinene",      [(nh = 10,), (nh = 20,)],                 ((nh = 100,), 1.98721e1)),
+    ("polygon",     [(n = 25,), (n = 50,)],                   ((n = 100,), -0.674981)),
+    ("robot",       [(nh = 20,), (nh = 50,)],                 ((nh = 200,), 9.14138)),
+    ("rocket",      [(nh = 50,), (nh = 100,)],                ((nh = 400,), 1.01283)),
+    ("steering",    [(nh = 20,), (nh = 50,)],                 ((nh = 200,), 5.54577e-1)),
+    ("torsion",     [(nx = 10, ny = 10), (nx = 14, ny = 14)], ((nx = 50, ny = 50), -4.18087e-1)),
+    ("transition_state", [nothing],                           nothing),
+    ("tetra_duct12", [nothing],                               nothing),
+    ("tetra_duct15", [nothing],                               (nothing, 1.04951e4)),
+    ("tetra_duct20", [nothing],                               (nothing, 4.82685e3)),
+    ("tetra_foam5",  [nothing],                               nothing),
+    ("tetra_gear",   [nothing],                               (nothing, 4.15163e3)),
+    ("tetra_hook",   [nothing],                               nothing),
+    ("triangle_deer",   [nothing],                            nothing),
+    ("triangle_pacman", [nothing],                            (nothing, 1.25045e3)),
+    ("triangle_turtle", [nothing],                            nothing),
+]
+    core = getfield(COPSBenchmark, Symbol(name, :_core))()
+    model_func = getfield(COPSBenchmark, Symbol(name, :_model))
+    extra = get(core_direct_extra, name, () -> ())
+    mat(s) = s === nothing ? ExaModels.ExaModel(core) : ExaModels.ExaModel(core, s)
+
+    if solve_ref !== nothing
+        sargs, ref_obj = solve_ref
+        results = ipopt(mat(sargs); print_level = 0, tol = 1e-8)
+        @test results.status == :first_order
+        @test results.objective ≈ ref_obj rtol = 1e-4
+    end
+
+    for s in sizings
+        m_core = mat(s)
+        m_dir = model_func(COPSBenchmark.ExaModelsBackend(), extra()...,
+            (s === nothing ? () : values(s))...)
+
+        nvar = NLPModels.get_nvar(m_dir)
+        ncon = NLPModels.get_ncon(m_dir)
+        @test NLPModels.get_nvar(m_core) == nvar
+        @test NLPModels.get_ncon(m_core) == ncon
+        @test m_core.meta.minimize == m_dir.meta.minimize
+
+        x0 = copy(m_dir.meta.x0)
+        @test m_core.meta.x0 ≈ x0 atol = 1e-12
+        @test NLPModels.get_lvar(m_core) == NLPModels.get_lvar(m_dir)
+        @test NLPModels.get_uvar(m_core) == NLPModels.get_uvar(m_dir)
+        @test NLPModels.get_lcon(m_core) == NLPModels.get_lcon(m_dir)
+        @test NLPModels.get_ucon(m_core) == NLPModels.get_ucon(m_dir)
+
+        # Perturbed evaluation point: x0 components can sit at kink/symmetry
+        # points where derivative comparisons are degenerate.
+        xt = x0 .+ 0.001 .* sin.(1:nvar)
+        y0 = ones(ncon)
+        @test obj(m_core, xt) ≈ obj(m_dir, xt) atol = 1e-8 rtol = 1e-10
+        @test grad(m_core, xt) ≈ grad(m_dir, xt) atol = 1e-8 rtol = 1e-10
+        if ncon > 0
+            @test cons(m_core, xt) ≈ cons(m_dir, xt) atol = 1e-8 rtol = 1e-10
+            @test spjac(m_core, xt, ncon, nvar) ≈ spjac(m_dir, xt, ncon, nvar) atol = 1e-8 rtol = 1e-10
+        end
+        @test sphess(m_core, xt, y0, nvar) ≈ sphess(m_dir, xt, y0, nvar) atol = 1e-8 rtol = 1e-10
+    end
+end

@@ -79,3 +79,70 @@
 
     return ExaModels.ExaModel(c; kwargs...)
 end
+
+function COPSBenchmark.catmix_core()
+    args = ExaModels.ArgTracer()
+    c = ExaCore(concrete = Val(true))
+    ne = 2
+    nc = 3
+
+    h = 1 / args.nh   # Final time / nh
+
+    rho = [
+        0.11270166537926,
+        0.50000000000000,
+        0.88729833462074,
+    ]
+    bc = [1.0, 0.0]   # Boundary conditions for x
+    alpha = 0.0       # Smoothing parameter
+    neg_one = -1.0
+    ten_T = 10.0
+    one_T = 1.0
+    rho_index = [(i, rho[i]) for i in 1:nc]
+
+    # lvar/uvar/start given as zeros(T,...)/ones(T,...) in the eager
+    # constructor: written as broadcast scalars here (value-identical).
+    c, u = add_var(c, args.nh, nc; lvar = 0.0, uvar = 1.0, start = 0.0)
+    c, v = add_var(c, args.nh, ne; start = [mod(j, ne) for i in 1:args.nh, j in 1:ne])
+    c, w = add_var(c, args.nh, nc, ne; start = 0.0)
+    c, pp = add_var(c, args.nh, nc, ne; start = [mod(k, ne) for i in 1:args.nh, j in 1:nc, k in 1:ne])
+    c, Dpp = add_var(c, args.nh, nc, ne; start = 0.0)
+    c, ppf = add_var(c, ne; start = [mod(i, ne) for i in 1:ne])
+
+    c, _ = add_obj(c, neg_one + ppf[1] + ppf[2] for _ in 1:1)
+    c, _ = add_obj(c, alpha / h * (u[i+1, j] - u[i, j])^2 for i in 1:args.nh-1, j in 1:nc)
+
+    c, _ = add_con(
+        c,
+        pp[i, k, s] - v[i, s] - h * sum(w[i, j, s] * (rho^j / factorial(j)) for j in 1:nc)
+        for i = 1:args.nh, (k, rho) in rho_index, s = 1:ne
+    )
+    c, _ = add_con(
+        c,
+        Dpp[i, k, s] - sum(w[i, j, s] * (rho^(j-1) / factorial(j - 1)) for j in 1:nc)
+        for i = 1:args.nh, (k, rho) in rho_index, s = 1:ne
+    )
+    c, _ = add_con(
+        c,
+        ppf[s] - v[args.nh, s] - h * sum(w[args.nh, j, s] / factorial(j) for j in 1:nc) for s in 1:ne
+    )
+    c, _ = add_con(
+        c,
+        v[i, s] + sum(w[i, j, s] * h / factorial(j) for j in 1:nc) - v[i+1, s]
+        for i in 1:args.nh-1, s in 1:ne
+    )
+    c, _ = add_con(
+        c,
+        Dpp[i, j, 1] - u[i, j] * (ten_T * pp[i, j, 2] - pp[i, j, 1]) for i = 1:args.nh, j = 1:nc
+    )
+    c, _ = add_con(
+        c,
+        Dpp[i, j, 2] - u[i, j] * (pp[i, j, 1] - ten_T * pp[i, j, 2]) + (one_T - u[i, j]) * pp[i, j, 2]
+        for i = 1:args.nh, j = 1:nc
+    )
+    c, _ = add_con(
+        c,
+        v[1, s] - bc for (s, bc) in [(i, bc[i]) for i in 1:ne]
+    )
+    c
+end

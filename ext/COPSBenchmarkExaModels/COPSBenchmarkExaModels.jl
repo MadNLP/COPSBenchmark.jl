@@ -5,6 +5,12 @@ import COPSBenchmark
 import COPSBenchmark: ExaModelsBackend
 using ExaModels
 
+# `Deferred(f)` (not exported): a function of the resolved args, evaluated
+# once per materialization — used by the *_core builders as a value slot
+# (computed start arrays, bounds) or as an index set (pars records carrying
+# precomputed index data per element).
+const Deferred = ExaModels.Deferred
+
 include("bearing.jl")
 include("camshape.jl")
 include("catmix.jl")

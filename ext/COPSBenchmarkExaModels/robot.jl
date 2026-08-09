@@ -71,3 +71,67 @@
 
     return ExaModels.ExaModel(core; kwargs...)
 end
+
+function COPSBenchmark.robot_core()
+    args = ExaModels.ArgTracer()
+    c = ExaCore(concrete = Val(true))
+    # total length of arm
+    L = 5.0
+    # Upper bounds on the controls
+    max_u_rho = 1.0
+    max_u_the = 1.0
+    max_u_phi = 1.0
+    # Initial positions of the length and the angles for the robot arm
+    rho0 = 4.5
+    pi_T = pi
+    phi0 = pi_T / 4
+    half = 0.5
+    third = 1 / 3
+    inv_nh = 1 / args.nh
+    two_pi_3 = 2 * pi_T / 3
+    four_pi_3 = 4 * pi_T / 3
+    zero_T = 0.0
+
+    c, rho = add_var(c, args.nh+1; start = rho0, lvar = zero_T, uvar = L)
+    c, the = add_var(c, args.nh+1; start = [two_pi_3 * (k * inv_nh)^2 for k = 1:args.nh+1], lvar = -pi_T, uvar = pi_T)
+    c, phi = add_var(c, args.nh+1; start = phi0, lvar = zero_T, uvar = pi_T)
+    # Derivatives
+    c, rho_dot = add_var(c, args.nh+1; start = zero_T)
+    c, the_dot = add_var(c, args.nh+1; start = [four_pi_3 * (k * inv_nh) for k = 1:args.nh+1])
+    c, phi_dot = add_var(c, args.nh+1; start = zero_T)
+    # Control
+    c, u_rho = add_var(c, args.nh+1; start = zero_T, lvar = -max_u_rho, uvar = max_u_rho)
+    c, u_the = add_var(c, args.nh+1; start = zero_T, lvar = -max_u_the, uvar = max_u_the)
+    c, u_phi = add_var(c, args.nh+1; start = zero_T, lvar = -max_u_phi, uvar = max_u_phi)
+    # Final time
+    c, tf = add_var(c, 1; start = 1.0, lvar = zero_T)
+
+    # Expressions (matching JuMP @expressions)
+    c, I_the = add_expr(c, ((L - rho[i])^3 + rho[i]^3) * (sin(phi[i]))^2 * third for i = 1:args.nh+1)
+    c, I_phi = add_expr(c, ((L - rho[i])^3 + rho[i]^3) * third for i = 1:args.nh+1)
+
+    c, _ = add_obj(c, tf[1] for i = 1:1)
+
+    # Dynamics
+    c, _ = add_con(c, -rho[j] + rho[j-1] + half * tf[1] * inv_nh * (rho_dot[j] + rho_dot[j-1]) for j = 2:args.nh+1)
+    c, _ = add_con(c, -phi[j] + phi[j-1] + half * tf[1] * inv_nh * (phi_dot[j] + phi_dot[j-1]) for j = 2:args.nh+1)
+    c, _ = add_con(c, -the[j] + the[j-1] + half * tf[1] * inv_nh * (the_dot[j] + the_dot[j-1]) for j = 2:args.nh+1)
+    c, _ = add_con(c, -rho_dot[j] + rho_dot[j-1] + half * tf[1] * inv_nh * (u_rho[j] + u_rho[j-1]) / L for j = 2:args.nh+1)
+    c, _ = add_con(c, -the_dot[j] + the_dot[j-1] + half * tf[1] * inv_nh * (u_the[j] / I_the[j] + u_the[j-1] / I_the[j-1]) for j = 2:args.nh+1)
+    c, _ = add_con(c, -phi_dot[j] + phi_dot[j-1] + half * tf[1] * inv_nh * (u_phi[j] / I_phi[j] + u_phi[j-1] / I_phi[j-1]) for j = 2:args.nh+1)
+
+    # Boundary conditions
+    c, _ = add_con(c, -rho[1] + rho0 for _ in 1:1)
+    c, _ = add_con(c, -the[1] + zero_T for _ in 1:1)
+    c, _ = add_con(c, -phi[1] + phi0 for _ in 1:1)
+    c, _ = add_con(c, -rho[k] + rho0 for k in args.nh+1:args.nh+1)
+    c, _ = add_con(c, -the[k] + two_pi_3 for k in args.nh+1:args.nh+1)
+    c, _ = add_con(c, -phi[k] + phi0 for k in args.nh+1:args.nh+1)
+    c, _ = add_con(c, -rho_dot[1] + zero_T for _ in 1:1)
+    c, _ = add_con(c, -the_dot[1] + zero_T for _ in 1:1)
+    c, _ = add_con(c, -phi_dot[1] + zero_T for _ in 1:1)
+    c, _ = add_con(c, -rho_dot[k] + zero_T for k in args.nh+1:args.nh+1)
+    c, _ = add_con(c, -the_dot[k] + zero_T for k in args.nh+1:args.nh+1)
+    c, _ = add_con(c, -phi_dot[k] + zero_T for k in args.nh+1:args.nh+1)
+    c
+end

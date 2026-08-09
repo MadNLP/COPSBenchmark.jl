@@ -30,3 +30,32 @@
 
     return ExaModels.ExaModel(c; kwargs...)
 end
+
+function COPSBenchmark.polygon_core()
+    args = ExaModels.ArgTracer()
+    N = div(args.n, 2)
+
+    c = ExaCore(concrete = Val(true))
+
+    c, r = add_var(c, N; lvar = 0.0, uvar = 1.0, start = 1.0)
+    c, θ = add_var(c, N; lvar = 0.0, uvar = Float64(π), start = [i * π / (N - 1) - π / (N - 1) for i in 1:N])
+
+    # Objective: maximize area = 0.5 * sum(r[i]*r[i+1]*sin(θ[i+1]-θ[i]))
+    c, _ = add_obj(c, -0.5 * r[i] * r[i+1] * sin(θ[i+1] - θ[i]) for i in 1:N-1)
+
+    # Fix last angle and radius
+    c, _ = add_con(c, θ[m] - Float64(π) for m in N:N)
+    c, _ = add_con(c, r[m] for m in N:N)
+
+    # Impose ordering on angles: θ[i+1] >= θ[i]
+    c, _ = add_con(c, (θ[i+1] - θ[i] for i in 1:N-1); lcon = 0.0, ucon = Inf)
+
+    # Diameter constraint: r[i]^2 + r[j]^2 - 2*r[i]*r[j]*cos(θ[i]-θ[j]) <= 1
+    pairs = Deferred(a -> begin
+        N = div(a.n, 2)
+        [(i, j) for i in 1:N-1 for j in i+1:N]
+    end)
+    c, _ = add_con(c, (r[i]^2 + r[j]^2 - 2*r[i]*r[j]*cos(θ[i] - θ[j]) - 1 for (i, j) in pairs);
+        lcon = -Inf, ucon = 0.0)
+    c
+end

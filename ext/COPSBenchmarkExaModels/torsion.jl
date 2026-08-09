@@ -35,3 +35,33 @@
 
     return ExaModels.ExaModel(core; kwargs...)
 end
+
+function COPSBenchmark.torsion_core()
+    args = ExaModels.ArgTracer()
+    c = ExaCore(concrete = Val(true))
+    c_val = 5.0
+    hx = 1.0 / (args.nx + 1.0)
+    hy = 1.0 / (args.ny + 1.0)
+    area = 0.5 * hx * hy
+
+    # Distance to boundary: D[k1,k2] for k1 in 1:nx+2, k2 in 1:ny+2
+    D = [min(min(i, args.nx - i + 1) * hx, min(j, args.ny - j + 1) * hy) for i in 0:args.nx+1, j in 0:args.ny+1]
+
+    c, v = add_var(c, args.nx+2, args.ny+2; start = D)
+
+    # Objective = area * ((quadLower + quadUpper)/2 - c*(linLower + linUpper)/3)
+    c, _ = add_obj(c, area / 2 * (((v[k1+1, k2] - v[k1, k2]) / hx)^2 + ((v[k1, k2+1] - v[k1, k2]) / hy)^2)
+        for k1 in 1:args.nx+1, k2 in 1:args.ny+1)
+    c, _ = add_obj(c, area / 2 * (((v[k1, k2] - v[k1-1, k2]) / hx)^2 + ((v[k1, k2] - v[k1, k2-1]) / hy)^2)
+        for k1 in 2:args.nx+2, k2 in 2:args.ny+2)
+    c, _ = add_obj(c, -area * c_val / 3 * (v[k1+1, k2] + v[k1, k2] + v[k1, k2+1])
+        for k1 in 1:args.nx+1, k2 in 1:args.ny+1)
+    c, _ = add_obj(c, -area * c_val / 3 * (v[k1, k2] + v[k1-1, k2] + v[k1, k2-1])
+        for k1 in 2:args.nx+2, k2 in 2:args.ny+2)
+
+    # Bound constraints on v: -D <= v <= D (matching JuMP's @constraint formulation)
+    D_flat = [(k1, k2, D[k1, k2]) for k1 in 1:args.nx+2, k2 in 1:args.ny+2]
+    c, _ = add_con(c, (v[k1, k2] for (k1, k2, d) in D_flat);
+        lcon = [-d for (_, _, d) in D_flat], ucon = [d for (_, _, d) in D_flat])
+    c
+end

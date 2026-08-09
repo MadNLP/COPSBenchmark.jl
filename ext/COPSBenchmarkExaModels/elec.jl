@@ -26,3 +26,34 @@
 
     return ExaModels.ExaModel(core; kwargs...)
 end
+
+function COPSBenchmark.elec_core()
+    args = ExaModels.ArgTracer()
+    c = ExaCore(concrete = Val(true))
+    c, x = add_var(c, 1:args.np; start = Deferred(a -> begin
+        COPSBenchmark.Random.seed!(2713)
+        theta = (2pi) .* rand(a.np)
+        phi = pi .* rand(a.np)
+        [cos(theta[i])*sin(phi[i]) for i = 1:a.np]
+    end))
+    c, y = add_var(c, 1:args.np; start = Deferred(a -> begin
+        COPSBenchmark.Random.seed!(2713)
+        theta = (2pi) .* rand(a.np)
+        phi = pi .* rand(a.np)
+        [sin(theta[i])*sin(phi[i]) for i = 1:a.np]
+    end))
+    c, z = add_var(c, 1:args.np; start = Deferred(a -> begin
+        COPSBenchmark.Random.seed!(2713)
+        theta = (2pi) .* rand(a.np)
+        phi = pi .* rand(a.np)
+        [cos(phi[i]) for i = 1:a.np]
+    end))
+
+    # Coulomb potential
+    itr = Deferred(a -> [(i, j) for i in 1:a.np-1 for j in i+1:a.np])
+    c, _ = add_obj(c, 1.0 / sqrt((x[i] - x[j])^2 + (y[i] - y[j])^2 + (z[i] - z[j])^2) for (i, j) in itr)
+
+    # Unit-ball
+    c, _ = add_con(c, x[i]^2 + y[i]^2 + z[i]^2 - 1 for i = 1:args.np)
+    c
+end

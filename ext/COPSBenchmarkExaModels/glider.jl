@@ -68,3 +68,65 @@
 
     ExaModels.ExaModel(c; kwargs...)
 end
+
+function COPSBenchmark.glider_core()
+    args = ExaModels.ArgTracer()
+    c = ExaCore(concrete = Val(true))
+    x_0 = 0.0
+    y_0 = 1000.0
+    y_f = 900.0
+    vx_0 = 13.23
+    vx_f = 13.23
+    vy_0 = -1.288
+    vy_f = -1.288
+    u_c = 2.5
+    r_0 = 100.0
+    m = 100.0
+    g = 9.81
+    cd0 = 0.034
+    cd1 = 0.069662
+    S = 14.0
+    rho = 1.13
+    cL_min = 0.0
+    cL_max = 1.4
+    cL0 = cL_max / 2
+    half = 0.5
+    inv_nh = 1 / args.nh
+    r_offset = 2.5
+    one_T = 1.0
+
+    c, t_f = add_var(c, 1; lvar = 0.0, start = 1.0)
+    c, x = add_var(c, args.nh+1; lvar = 0.0, start = [x_0 + vx_0 * (k * inv_nh) for k in 0:args.nh])
+    c, y = add_var(c, args.nh+1; start = [y_0 + (k * inv_nh) * (y_f - y_0) for k in 0:args.nh])
+    c, vx = add_var(c, args.nh+1; lvar = 0.0, start = fill(vx_0, args.nh+1))
+    c, vy = add_var(c, args.nh+1; start = fill(vy_0, args.nh+1))
+    c, cL = add_var(c, args.nh+1; lvar = fill(cL_min, args.nh+1), uvar = fill(cL_max, args.nh+1), start = fill(cL0, args.nh+1))
+
+    # Expressions (matching JuMP @expressions)
+    c, r = add_expr(c, (x[i] / r_0 - r_offset)^2 for i in 1:args.nh+1)
+    c, u = add_expr(c, u_c * (one_T - r[i]) * exp(-r[i]) for i in 1:args.nh+1)
+    c, w = add_expr(c, vy[i] - u[i] for i in 1:args.nh+1)
+    c, v = add_expr(c, sqrt(vx[i]^2 + w[i]^2) for i in 1:args.nh+1)
+    c, D = add_expr(c, half * (cd0 + cd1 * cL[i]^2) * rho * S * v[i]^2 for i in 1:args.nh+1)
+    c, L = add_expr(c, half * cL[i] * rho * S * v[i]^2 for i in 1:args.nh+1)
+    c, vx_dot = add_expr(c, (-L[i] * (w[i] / v[i]) - D[i] * (vx[i] / v[i])) / m for i in 1:args.nh+1)
+    c, vy_dot = add_expr(c, (L[i] * (vx[i] / v[i]) - D[i] * (w[i] / v[i])) / m - g for i in 1:args.nh+1)
+
+    c, _ = add_obj(c, -x[k] for k in args.nh+1:args.nh+1)
+
+    # Dynamics
+    c, _ = add_con(c, x[j] - (x[j-1] + half * t_f[1] * inv_nh * (vx[j] + vx[j-1])) for j in 2:args.nh+1)
+    c, _ = add_con(c, y[j] - (y[j-1] + half * t_f[1] * inv_nh * (vy[j] + vy[j-1])) for j in 2:args.nh+1)
+    c, _ = add_con(c, vx[j] - (vx[j-1] + half * t_f[1] * inv_nh * (vx_dot[j] + vx_dot[j-1])) for j in 2:args.nh+1)
+    c, _ = add_con(c, vy[j] - (vy[j-1] + half * t_f[1] * inv_nh * (vy_dot[j] + vy_dot[j-1])) for j in 2:args.nh+1)
+
+    # Boundary constraints
+    c, _ = add_con(c, x[1] - x_0 for _ in 1:1)
+    c, _ = add_con(c, y[1] - y_0 for _ in 1:1)
+    c, _ = add_con(c, y[k] - y_f for k in args.nh+1:args.nh+1)
+    c, _ = add_con(c, vx[1] - vx_0 for _ in 1:1)
+    c, _ = add_con(c, vx[k] - vx_f for k in args.nh+1:args.nh+1)
+    c, _ = add_con(c, vy[1] - vy_0 for _ in 1:1)
+    c, _ = add_con(c, vy[k] - vy_f for k in args.nh+1:args.nh+1)
+    c
+end

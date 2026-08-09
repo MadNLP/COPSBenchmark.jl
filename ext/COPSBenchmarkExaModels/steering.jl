@@ -45,3 +45,44 @@
 
     return ExaModels.ExaModel(core; kwargs...)
 end
+
+function COPSBenchmark.steering_core()
+    args = ExaModels.ArgTracer()
+    c = ExaCore(concrete = Val(true))
+    a = 100.0  # Magnitude of force.
+    # Bounds on the control
+    u_min, u_max = -pi / 2, pi / 2
+    xs = zeros(4)
+    xf = [NaN, 5.0, 45.0, 0.0]
+    half = 0.5
+    inv_nh = 1 / args.nh
+
+    function gen_x0(k, i)
+        if i == 1 || i == 4
+            return 0.0
+        elseif i == 2
+            return 5.0 * k * inv_nh
+        elseif i == 3
+            return 45.0 * k * inv_nh
+        else
+            return 0.0
+        end
+    end
+
+    c, u = add_var(c, 1:args.nh+1; lvar = u_min, uvar = u_max, start = 0.0)   # control
+    c, x = add_var(c, 1:args.nh+1, 1:4; start = [gen_x0(i, j) for i = 1:args.nh+1, j = 1:4])  # state
+    c, tf = add_var(c, 1; start = 1.0)                                        # final time
+
+    c, _ = add_obj(c, tf[1] for _ in 1:1)
+
+    c, _ = add_con(c, (tf[1] for _ in 1:1); lcon = 0.0, ucon = Inf)
+    # Dynamics
+    c, _ = add_con(c, -x[i+1, 1] + x[i, 1] + half * (tf[1] * inv_nh) * (x[i, 3] + x[i+1, 3]) for i = 1:args.nh)
+    c, _ = add_con(c, -x[i+1, 2] + x[i, 2] + half * (tf[1] * inv_nh) * (x[i, 4] + x[i+1, 4]) for i = 1:args.nh)
+    c, _ = add_con(c, -x[i+1, 3] + x[i, 3] + half * (tf[1] * inv_nh) * (a * cos(u[i]) + a * cos(u[i+1])) for i = 1:args.nh)
+    c, _ = add_con(c, -x[i+1, 4] + x[i, 4] + half * (tf[1] * inv_nh) * (a * sin(u[i]) + a * sin(u[i+1])) for i = 1:args.nh)
+    # Boundary conditions
+    c, _ = add_con(c, -x[1, j] + s for (j, s) in enumerate(xs))
+    c, _ = add_con(c, -x[args.nh+1, j] + f for (j, f) in zip(2:4, xf[2:4]))
+    c
+end

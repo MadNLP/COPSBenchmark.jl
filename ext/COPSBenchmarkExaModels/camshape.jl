@@ -66,3 +66,63 @@
     return ExaModels.ExaModel(core; kwargs...)
 end
 
+
+function COPSBenchmark.camshape_core()
+    args = ExaModels.ArgTracer()
+    c = ExaCore(minimize = false, concrete = Val(true))
+    R_v = 1.0         # design parameter related to the valve shape
+    R_max = 2.0       # maximum allowed radius of the cam
+    R_min = 1.0       # minimum allowed radius of the cam
+    alpha = 1.5       # curvature limit parameter
+
+    d_theta = 2 * pi / (5 * (args.n + 1))   # angle between discretization points
+
+    # radius of the cam at discretization points
+    c, r = add_var(c, 1:args.n; lvar = R_min, uvar = R_max, start = (R_min + R_max) / 2.0)
+
+    c, _ = add_obj(c, (pi * R_v) / args.n * r[i] for i in 1:args.n)
+
+    # Convexity
+    c, _ = add_con(
+        c,
+        (-r[i-1] * r[i] - r[i] * r[i+1] + 2 * r[i-1] * r[i+1] * cos(d_theta) for i = 2:args.n-1);
+        lcon = -Inf, ucon = 0.0,
+    )
+    c, _ = add_con(
+        c,
+        (-R_min * r[1] - r[1] * r[2] + 2 * R_min * r[2] * cos(d_theta) for _ in 1:1);
+        lcon = -Inf, ucon = 0.0,
+    )
+    c, _ = add_con(
+        c,
+        (-R_min^2 - R_min * r[1] + 2 * R_min * r[1] * cos(d_theta) for _ in 1:1);
+        lcon = -Inf, ucon = 0.0,
+    )
+    c, _ = add_con(
+        c,
+        (-r[m-1] * r[m] - r[m] * R_max + 2 * r[m-1] * R_max * cos(d_theta) for m in args.n:args.n);
+        lcon = -Inf, ucon = 0.0,
+    )
+    c, _ = add_con(
+        c,
+        (-2 * R_max * r[m] + 2 * r[m]^2 * cos(d_theta) for m in args.n:args.n);
+        lcon = -Inf, ucon = 0.0,
+    )
+    # Curvature
+    c, _ = add_con(
+        c,
+        ((r[i+1] - r[i]) for i = 1:args.n-1);
+        lcon = -alpha * d_theta, ucon = alpha * d_theta,
+    )
+    c, _ = add_con(
+        c,
+        ((r[1] - R_min) for _ in 1:1);
+        lcon = -alpha * d_theta, ucon = alpha * d_theta,
+    )
+    c, _ = add_con(
+        c,
+        ((R_max - r[m]) for m in args.n:args.n);
+        lcon = -alpha * d_theta, ucon = alpha * d_theta,
+    )
+    c
+end

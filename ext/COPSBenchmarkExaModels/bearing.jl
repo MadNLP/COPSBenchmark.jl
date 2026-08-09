@@ -42,3 +42,42 @@ end
 
 
 
+
+function COPSBenchmark.bearing_core()
+    args = ExaModels.ArgTracer()
+    c = ExaCore(concrete = Val(true))
+    b = 10              # grid is (0,2*pi)x(0,2*b)
+    e = 0.1             # eccentricity
+
+    hx = 2 * pi / (args.nx + 1)  # grid spacing
+    hy = 2 * b / (args.ny + 1)   # grid spacing
+    area = 0.5 * hx * hy         # area of triangle
+
+    wq(i) = (1.0 + e * cos((i - 1) * hx))^3
+    v0 = [max(sin((i - 1) * hx), 0.0) for i in 1:args.nx+2, j in 1:args.ny+2]
+
+    c, v = add_var(c, 1:args.nx+2, 1:args.ny+2; lvar = 0.0, start = v0)
+
+    c, _ = add_obj(
+        c,
+        0.5 * (hx * hy / 6.0) * (wq(i) + 2 * wq(i + 1)) *
+        (((v[i+1, j] - v[i, j]) / hx)^2 + ((v[i, j+1] - v[i, j]) / hy)^2)
+        for i in 1:args.nx+1, j in 1:args.ny+1
+    )
+    c, _ = add_obj(
+        c,
+        0.5 * (hx * hy / 6.0) * (2 * wq(i) + 2 * wq(i - 1)) *
+        (((v[i-1, j] - v[i, j]) / hx)^2 + ((v[i, j-1] - v[i, j]) / hy)^2)
+        for i in 2:args.nx+2, j in 2:args.ny+2
+    )
+    c, _ = add_obj(
+        c,
+        -hx * hy * e * sin((i - 1) * hx) * v[i, j] for i in 1:args.nx+2, j in 1:args.ny+2
+    )
+
+    c, _ = add_con(c, v[i, 1] for i in 1:args.nx+2)
+    c, _ = add_con(c, v[i, args.ny+2] for i in 1:args.nx+2)
+    c, _ = add_con(c, v[1, i] for i in 1:args.ny+2)
+    c, _ = add_con(c, v[args.nx+2, i] for i in 1:args.ny+2)
+    c
+end

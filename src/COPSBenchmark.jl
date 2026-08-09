@@ -40,6 +40,37 @@ function triangle_turtle_model end
 
 function transition_state_model end
 
+function bearing_core end
+function camshape_core end
+function catmix_core end
+function chain_core end
+function channel_core end
+function dirichlet_core end
+function elec_core end
+function gasoil_core end
+function glider_core end
+function henon_core end
+function lane_emden_core end
+function marine_core end
+function methanol_core end
+function minsurf_core end
+function pinene_core end
+function polygon_core end
+function robot_core end
+function rocket_core end
+function steering_core end
+function tetra_duct12_core end
+function tetra_duct15_core end
+function tetra_duct20_core end
+function tetra_foam5_core end
+function tetra_gear_core end
+function tetra_hook_core end
+function torsion_core end
+function transition_state_core end
+function triangle_deer_core end
+function triangle_pacman_core end
+function triangle_turtle_core end
+
 include("pde_utils.jl")
 
 end # module COPSBenchmark
