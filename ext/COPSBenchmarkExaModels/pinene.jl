@@ -5,63 +5,35 @@
 # COPS 3.0 - November 2002
 # COPS 3.1 - March 2004
 #
-@inline function COPSBenchmark.pinene_model(::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...)
+# Same collocation template as gasoil/marine.  `h` keeps its symbolic form; the
+# measurement index map and the starting values built from it are data.
+@inline function COPSBenchmark.pinene_recipe(
+    ::ExaModelsBackend; T = Float64, backend = nothing,
+)
     nc = 3        # number of collocation points
     ne = 5        # number of differential equations
     np = 5        # number of ODE parameters
     nm = 8        # number of measurements
 
-    # roots of k-th degree Legendre polynomial
     rho = T[0.11270166537926, 0.5, 0.88729833462074]
-    # boundary conditions
     bc = T[100, 0, 0, 0, 0]
-    # times at which observations made
-    tau = T[1230, 3060, 4920, 7800, 10680, 15030, 22620, 36420]
-    tf = tau[nm]                            # ODEs defined in [0,tf]
-    h = tf / T(nh)                          # uniform interval length
-    t = T[T(i-1)*h for i in 1:nh+1]         # partition
+    tf = T(36420)                           # tau[nm]
     zero_T = T(0)
 
-    # itau[i] is the largest integer k with t[k] <= tau[i]
-    itau = Int[min(nh, Int(floor(tau[i]/h))+1) for i in 1:nm]
+    core, nh, d = ExaModels.ExaCore(T; backend = backend, nargs = Val(2))
 
-    # Observations
-    z = reshape(T[
-        88.35,  7.3,  2.3,  0.4,  1.75,
-        76.4,  15.6,  4.5,  0.7,  2.8,
-        65.1,  23.1,  5.3,  1.1,  5.8,
-        50.4,  32.9,  6.0,  1.5,  9.3,
-        37.5,  42.7,  6.0,  1.9, 12.0,
-        25.9,  49.1,  5.9,  2.2, 17.0,
-        14.0,  57.4,  5.1,  2.6, 21.0,
-        4.5,  63.1,  3.8,  2.9, 25.7,
-    ], ne, nm)'
-
-    v0 = zeros(T, nh, ne)
-    # Starting-value
-    for i in 1:itau[1], s in 1:ne
-        v0[i, s] = bc[s]
-    end
-    for j in 2:nm, i =itau[j-1]+1:itau[j], s in 1:ne
-        v0[i, s] = z[j, s]
-    end
-    for i in itau[nm]+1:nh, s in 1:ne
-        v0[i, s] = z[nm, s]
-    end
-
-    core = ExaModels.ExaCore(T; backend= backend, concrete = Val(true))
+    h = tf / nh                             # uniform interval length
 
     ExaModels.@add_var(core, theta, 1:np; lvar = zero_T, start=zero_T)
     # The collocation approximation u is defined by the parameters v and w.
     # uc and Duc are, respectively, u and u' evaluated at the collocation points.
-    ExaModels.@add_var(core, v, 1:nh, 1:ne; start=[v0[i, s] for i=1:nh, s=1:ne])
+    ExaModels.@add_var(core, v, 1:nh, 1:ne; start=d.v_start)
     ExaModels.@add_var(core, w, 1:nh, 1:nc, 1:ne; start=zero_T)
-    ExaModels.@add_var(core, uc, 1:nh, 1:nc, 1:ne; start=[v0[i,s] for i=1:nh, j=1:nc, s=1:ne])
+    ExaModels.@add_var(core, uc, 1:nh, 1:nc, 1:ne; start=d.uc_start)
     ExaModels.@add_var(core, Duc, 1:nh, 1:nc, 1:ne; start=zero_T)
 
-    itr = [(j, s, itau[j], tau[j], t[itau[j]], z[j,s]) for j=1:nm, s in 1:ne]
     # l2 error
-    ExaModels.@add_obj(core, (v[it,s] + sum(w[it,k,s]*(tj-ti)^k/(T(factorial(k))*h^(k-1)) for k in 1:nc) - zjs)^2 for (j, s, it, tj, ti, zjs) in itr)
+    ExaModels.@add_obj(core, (v[it,s] + sum(w[it,k,s]*(tj-ti)^k/(T(factorial(k))*h^(k-1)) for k in 1:nc) - zjs)^2 for (j, s, it, tj, ti, zjs) in d.itr)
 
     # Collocation model
     itr2 = [(j,rho[j]) for j=1:nc]
@@ -92,5 +64,51 @@
     ExaModels.@add_con(core, c8, -Duc[i,j,4] + theta[3]*uc[i,j,3] for i=1:nh, j=1:nc)
     ExaModels.@add_con(core, c9, -Duc[i,j,5] + theta[4]*uc[i,j,3] - theta[5]*uc[i,j,5] for i=1:nh, j=1:nc)
 
-    return ExaModels.ExaModel(core; kwargs...)
+    return core
 end
+
+@inline function COPSBenchmark.pinene_args(::ExaModelsBackend, nh; T = Float64)
+    nc = 3
+    ne = 5
+    nm = 8
+    bc = T[100, 0, 0, 0, 0]
+    tau = T[1230, 3060, 4920, 7800, 10680, 15030, 22620, 36420]
+    tf = tau[nm]
+    h = tf / T(nh)
+    t = T[T(i-1)*h for i in 1:nh+1]
+    itau = Int[min(nh, Int(floor(tau[i]/h))+1) for i in 1:nm]
+
+    z = reshape(T[
+        88.35,  7.3,  2.3,  0.4,  1.75,
+        76.4,  15.6,  4.5,  0.7,  2.8,
+        65.1,  23.1,  5.3,  1.1,  5.8,
+        50.4,  32.9,  6.0,  1.5,  9.3,
+        37.5,  42.7,  6.0,  1.9, 12.0,
+        25.9,  49.1,  5.9,  2.2, 17.0,
+        14.0,  57.4,  5.1,  2.6, 21.0,
+        4.5,  63.1,  3.8,  2.9, 25.7,
+    ], ne, nm)'
+
+    v0 = zeros(T, nh, ne)
+    for i in 1:itau[1], s in 1:ne
+        v0[i, s] = bc[s]
+    end
+    for j in 2:nm, i =itau[j-1]+1:itau[j], s in 1:ne
+        v0[i, s] = z[j, s]
+    end
+    for i in itau[nm]+1:nh, s in 1:ne
+        v0[i, s] = z[nm, s]
+    end
+
+    v_start  = [v0[i, s] for i=1:nh, s=1:ne]
+    uc_start = [v0[i, s] for i=1:nh, j=1:nc, s=1:ne]
+    itr = [(j, s, itau[j], tau[j], t[itau[j]], z[j,s]) for j=1:nm, s in 1:ne]
+    return (nh, (; v_start, uc_start, itr))
+end
+
+@inline COPSBenchmark.pinene_model(b::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...) =
+    ExaModels.ExaModel(
+        COPSBenchmark.pinene_recipe(b; T = T, backend = backend),
+        COPSBenchmark.pinene_args(b, nh; T = T)...;
+        kwargs...,
+    )

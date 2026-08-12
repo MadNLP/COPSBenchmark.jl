@@ -5,86 +5,33 @@
 # COPS 3.0 - November 2002
 # COPS 3.1 - March 2004
 
-@inline function COPSBenchmark.methanol_model(::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...)
+# `v0` is computed elaborately and then overwritten wholesale with 0.001, so
+# every start in this model is that scalar -- nothing size-dependent survives.
+# Only the measurement table, which depends on the interval length, is data.
+@inline function COPSBenchmark.methanol_recipe(
+    ::ExaModelsBackend; T = Float64, backend = nothing,
+)
     ne = 3
     np = 5
     nc = 3
-    nm = 17
 
     rho = T[0.11270166537926, 0.5, 0.88729833462074]
-    # times at which observations made
-    tau = T[
-        0.,
-        0.050,
-        0.065,
-        0.080,
-        0.123,
-        0.233,
-        0.273,
-        0.354,
-        0.397,
-        0.418,
-        0.502,
-        0.553,
-        0.681,
-        0.750,
-        0.916,
-        0.937,
-        1.122,
-    ]
-    tf = tau[nm]                          # ODEs defined in [0,tf]
-    h = tf / T(nh)                        # uniform interval length
-    t = T[T(i-1)*h for i in 1:nh+1]       # partition
+    tf = T(1.122)                         # tau[nm]; ODEs defined in [0,tf]
     zero_T = T(0)
     two_T = T(2)
-
-    # itau[i] is the largest integer k with t[k] <= tau[i]
-    itau = Int[min(nh, Int(floor(tau[i]/h))+1) for i in 1:nm]
-
-    # Concentrations
-    z = reshape(T[
-        1.0000, 0.0000, 0.0000,
-        0.7085, 0.1621, 0.0811,
-        0.5971, 0.1855, 0.0965,
-        0.5537, 0.1989, 0.1198,
-        0.3684, 0.2845, 0.1535,
-        0.1712, 0.3491, 0.2097,
-        0.1198, 0.3098, 0.2628,
-        0.0747, 0.3576, 0.2467,
-        0.0529, 0.3347, 0.2884,
-        0.0415, 0.3388, 0.2757,
-        0.0261, 0.3557, 0.3167,
-        0.0208, 0.3483, 0.2954,
-        0.0085, 0.3836, 0.2950,
-        0.0053, 0.3611, 0.2937,
-        0.0019, 0.3609, 0.2831,
-        0.0018, 0.3485, 0.2846,
-        0.0006, 0.3698, 0.2899,
-    ], ne, nm)'
-    con1_matrix = [(j, s, itau[j], tau[j], z[j,s], t[itau[j]]) for j in 1:nm, s in 1:ne]
     bc = T[1, 0, 0]
 
-    # Starting-value
-    v0 = zeros(T, nh, ne)
-    for i in 1:itau[1], s in 1:ne
-        v0[i, s] = bc[s]
-    end
-    for j in 2:nm, i in itau[j-1]+1:itau[j], s in 1:ne
-        v0[i, s] = z[j, s]
-    end
-    for i in itau[nm]+1:nh, s in 1:ne
-        v0[i, s] = z[nm, s]
-    end
-    v0 .= T(0.001)
+    c, nh, d = ExaModels.ExaCore(T; backend = backend, nargs = Val(2))
 
-    c = ExaModels.ExaCore(T; backend = backend, concrete = Val(true))
+    h = tf / nh                           # uniform interval length
+
     ExaModels.@add_var(c, theta, np; lvar = zero_T, start = fill(T(1), np))
-    ExaModels.@add_var(c, v, nh, ne; start = v0)
+    ExaModels.@add_var(c, v, nh, ne; start = T(0.001))
     ExaModels.@add_var(c, w, nh, nc, ne; start = zero_T)
-    ExaModels.@add_var(c, uc, nh, nc, ne; start = [v0[i,s] for i=1:nh, j=1:nc, s=1:ne])
+    ExaModels.@add_var(c, uc, nh, nc, ne; start = T(0.001))
     ExaModels.@add_var(c, Duc, nh, nc, ne; start = zero_T)
 
-    ExaModels.@add_obj(c, (v[itau,s] + sum(w[itau,k,s]*(tau-t)^k/(T(factorial(k))*h^(k-1)) for k in 1:nc) - z)^2 for (j,s,itau,tau,z,t) in con1_matrix)
+    ExaModels.@add_obj(c, (v[itau,s] + sum(w[itau,k,s]*(tau-t)^k/(T(factorial(k))*h^(k-1)) for k in 1:nc) - z)^2 for (j,s,itau,tau,z,t) in d.con1_matrix)
 
     ExaModels.@add_con(
         c,
@@ -132,5 +79,48 @@
                         theta[4]*uc[i,j,1]) for i=1:nh, j=1:nc
     )
 
-    return ExaModels.ExaModel(c; kwargs...)
+    return c
 end
+
+@inline function COPSBenchmark.methanol_args(::ExaModelsBackend, nh; T = Float64)
+    ne = 3
+    nm = 17
+    tau = T[
+        0., 0.050, 0.065, 0.080, 0.123, 0.233, 0.273, 0.354, 0.397, 0.418,
+        0.502, 0.553, 0.681, 0.750, 0.916, 0.937, 1.122,
+    ]
+    tf = tau[nm]
+    h = tf / T(nh)
+    t = T[T(i-1)*h for i in 1:nh+1]
+    itau = Int[min(nh, Int(floor(tau[i]/h))+1) for i in 1:nm]
+
+    z = reshape(T[
+        1.0000, 0.0000, 0.0000,
+        0.7085, 0.1621, 0.0811,
+        0.5971, 0.1855, 0.0965,
+        0.5537, 0.1989, 0.1198,
+        0.3684, 0.2845, 0.1535,
+        0.1712, 0.3491, 0.2097,
+        0.1198, 0.3098, 0.2628,
+        0.0747, 0.3576, 0.2467,
+        0.0529, 0.3347, 0.2884,
+        0.0415, 0.3388, 0.2757,
+        0.0261, 0.3557, 0.3167,
+        0.0208, 0.3483, 0.2954,
+        0.0085, 0.3836, 0.2950,
+        0.0053, 0.3611, 0.2937,
+        0.0019, 0.3609, 0.2831,
+        0.0018, 0.3485, 0.2846,
+        0.0006, 0.3698, 0.2899,
+    ], ne, nm)'
+
+    con1_matrix = [(j, s, itau[j], tau[j], z[j,s], t[itau[j]]) for j in 1:nm, s in 1:ne]
+    return (nh, (; con1_matrix))
+end
+
+@inline COPSBenchmark.methanol_model(b::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...) =
+    ExaModels.ExaModel(
+        COPSBenchmark.methanol_recipe(b; T = T, backend = backend),
+        COPSBenchmark.methanol_args(b, nh; T = T)...;
+        kwargs...,
+    )

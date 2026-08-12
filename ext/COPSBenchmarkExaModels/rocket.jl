@@ -4,7 +4,13 @@
 # COPS 3.0 - November 2002
 # COPS 3.1 - March 2004
 
-@inline function COPSBenchmark.rocket_model(::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...)
+# The two varying starting points are data, not structure: they are
+# comprehensions over the size, which has no symbolic form.  They are computed
+# in `rocket_args` and supplied as arguments, so the core holds no function of
+# this package's.  `inv_nh` does have a symbolic form and stays here.
+@inline function COPSBenchmark.rocket_recipe(
+    ::ExaModelsBackend; T = Float64, backend = nothing,
+)
     h_0 = T(1)
     v_0 = T(0)
     m_0 = T(1)
@@ -14,29 +20,27 @@
     v_c = T(620)
     m_c = T(0.6)
     half = T(0.5)
-    inv_nh = T(1) / T(nh)
 
     c = half*sqrt(g_0 * h_0)
     m_f = m_c * m_0
     D_c = half * v_c * (m_0 / g_0)
     T_max = T_c * m_0 * g_0
 
-    core = ExaModels.ExaCore(T; backend= backend, minimize=false, concrete = Val(true))
+    core, nh, s_v_start, s_m_start = ExaModels.ExaCore(
+        T; backend = backend, minimize = false, nargs = Val(3),
+    )
 
-    # Precompute generator scalars so the broadcast closure stays isbits
-    # (Metal rejects Type{T} captures). And bind the thrust-variable name as
-    # Th rather than T to avoid shadowing the Type parameter T inside the
-    # function — that shadowing caused Julia to Box the captured T value.
-    s_v_start  = T[T(i)*inv_nh*(T(1) - T(i)*inv_nh) for i=0:nh]
-    s_m_start  = T[(m_f - m_0)*(T(i)*inv_nh) + m_0 for i=0:nh]
+    inv_nh = one(T) / nh
     s_Th_start = T_max*half
+
     ExaModels.@add_var(core, h, 0:nh; start=h_0, lvar = h_0)
     ExaModels.@add_var(core, v, 0:nh; start=s_v_start, lvar = v_0)
     ExaModels.@add_var(core, m, 0:nh; start=s_m_start, lvar = m_f, uvar = m_0)
     ExaModels.@add_var(core, Th, 0:nh; start=s_Th_start, lvar = v_0, uvar = T_max)
     ExaModels.@add_var(core, step, 1; start=inv_nh, lvar = v_0)
 
-    ExaModels.@add_obj(core, h[nh])
+    # Indexes the last point, so the index arrives as data.
+    ExaModels.@add_obj(core, h[k] for k in nh:nh)
 
     # Dynamics
     ExaModels.@add_con(core, c1, - h[i] + h[i-1] + half * step[1] * (v[i] + v[i-1]) for i=1:nh)
@@ -47,7 +51,25 @@
     ExaModels.@add_con(core, c4, h[0] - h_0)
     ExaModels.@add_con(core, c5, v[0] - v_0)
     ExaModels.@add_con(core, c6, m[0] - m_0)
-    ExaModels.@add_con(core, c7, m[nh] - m_f)
+    ExaModels.@add_con(core, c7, m[k] - m_f for k in nh:nh)
 
-    return ExaModels.ExaModel(core; kwargs...)
+    return core
 end
+
+@inline function COPSBenchmark.rocket_args(::ExaModelsBackend, nh; T = Float64)
+    m_0 = T(1)
+    m_f = T(0.6) * m_0
+    inv_nh = T(1) / T(nh)
+    # Precompute generator scalars so the broadcast closure stays isbits
+    # (Metal rejects Type{T} captures).
+    s_v_start = T[T(i)*inv_nh*(T(1) - T(i)*inv_nh) for i=0:nh]
+    s_m_start = T[(m_f - m_0)*(T(i)*inv_nh) + m_0 for i=0:nh]
+    return (nh, s_v_start, s_m_start)
+end
+
+@inline COPSBenchmark.rocket_model(b::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...) =
+    ExaModels.ExaModel(
+        COPSBenchmark.rocket_recipe(b; T = T, backend = backend),
+        COPSBenchmark.rocket_args(b, nh; T = T)...;
+        kwargs...,
+    )

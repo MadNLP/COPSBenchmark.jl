@@ -3,11 +3,14 @@
 # COPS 3.0 - November 2002
 # COPS 3.1 - March 2004
 
-@inline function COPSBenchmark.catmix_model(::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...)
+# The uniform bounds and zero starts were written as full arrays sized by nh;
+# as scalars they say the same thing without depending on the size.  The two
+# patterned starts do depend on it and travel as data.
+@inline function COPSBenchmark.catmix_recipe(
+    ::ExaModelsBackend; T = Float64, backend = nothing,
+)
     ne = 2
     nc = 3
-
-    h = T(1) / T(nh)   # Final time / nh (was Int/Int → Float64)
 
     rho = T[
         0.11270166537926,
@@ -21,61 +24,76 @@
     one_T = T(1)
     rho_index = [(i, rho[i]) for i in 1:nc]
 
-    c = ExaModels.ExaCore(T; backend = backend, concrete = Val(true))
-    ExaModels.@add_var(c, u, nh, nc; lvar = zeros(T, nh, nc), uvar = ones(T, nh, nc), start = zeros(T, nh, nc))
-    ExaModels.@add_var(c, v, nh, ne; start = T[mod(j, ne) for i in 1:nh, j in 1:ne])
-    ExaModels.@add_var(c, w, nh, nc, ne; start = zeros(T, nh, nc, ne))
-    ExaModels.@add_var(c, pp, nh, nc, ne; start = T[mod(k, ne) for i in 1:nh, j in 1:nc, k in 1:ne])
-    ExaModels.@add_var(c, Dpp, nh, nc, ne; start = zeros(T, nh, nc, ne))
-    ExaModels.@add_var(c, ppf, ne; start = T[mod(i,ne) for i in 1:ne])
+    core, nh, d = ExaModels.ExaCore(T; backend = backend, nargs = Val(2))
 
-    ExaModels.@add_obj(c, neg_one + ppf[1] + ppf[2])
-    ExaModels.@add_obj(c, alpha/h*(u[i+1, j] - u[i, j])^2 for i in 1:nh-1, j in 1:nc)
+    h = one(T) / nh   # Final time / nh
+
+    ExaModels.@add_var(core, u, nh, nc; lvar = zero(T), uvar = one(T), start = zero(T))
+    ExaModels.@add_var(core, v, nh, ne; start = d.v_start)
+    ExaModels.@add_var(core, w, nh, nc, ne; start = zero(T))
+    ExaModels.@add_var(core, pp, nh, nc, ne; start = d.pp_start)
+    ExaModels.@add_var(core, Dpp, nh, nc, ne; start = zero(T))
+    ExaModels.@add_var(core, ppf, ne; start = T[mod(i,ne) for i in 1:ne])
+
+    ExaModels.@add_obj(core, neg_one + ppf[1] + ppf[2])
+    ExaModels.@add_obj(core, alpha/h*(u[i+1, j] - u[i, j])^2 for i in 1:nh-1, j in 1:nc)
 
     ExaModels.@add_con(
-        c,
+        core,
         c1,
         pp[i, k, s] - v[i, s] - h*sum(w[i, j, s]*(rho^j/T(factorial(j))) for j in 1:nc) for i=1:nh,  (k, rho) in rho_index, s=1:ne
     )
 
     ExaModels.@add_con(
-        c,
+        core,
         c2,
         Dpp[i, k, s] - sum(w[i, j, s]*(rho^(j-1)/T(factorial(j-1))) for j in 1:nc) for i=1:nh, (k, rho) in rho_index, s=1:ne
     )
 
     ExaModels.@add_con(
-        c,
+        core,
         c3,
-        ppf[s] - v[nh, s] - h * sum(w[nh, j, s] / T(factorial(j)) for j in 1:nc) for s in 1:ne
+        ppf[s] - v[k, s] - h * sum(w[k, j, s] / T(factorial(j)) for j in 1:nc) for k in nh:nh, s in 1:ne
     )
 
     ExaModels.@add_con(
-        c,
+        core,
         c4,
         v[i, s] + sum(w[i, j, s] * h / T(factorial(j)) for j in 1:nc) - v[i+1, s] for i in 1:nh-1, s in 1:ne
     )
 
-
-
     ExaModels.@add_con(
-        c,
+        core,
         c5,
         Dpp[i,j,1] - u[i,j] * (ten_T*pp[i,j,2] - pp[i,j,1]) for i=1:nh, j=1:nc
     )
 
     ExaModels.@add_con(
-        c,
+        core,
         c6,
         Dpp[i,j,2] - u[i,j] * (pp[i,j,1] - ten_T*pp[i,j,2]) + (one_T - u[i,j])*pp[i,j,2] for i=1:nh, j=1:nc
     )
 
-
     ExaModels.@add_con(
-        c,
+        core,
         c7,
         v[1, s] - bc for (s, bc) in [(i, bc[i]) for i in 1:ne]
     )
 
-    return ExaModels.ExaModel(c; kwargs...)
+    return core
 end
+
+@inline function COPSBenchmark.catmix_args(::ExaModelsBackend, nh; T = Float64)
+    ne = 2
+    nc = 3
+    v_start  = T[mod(j, ne) for i in 1:nh, j in 1:ne]
+    pp_start = T[mod(k, ne) for i in 1:nh, j in 1:nc, k in 1:ne]
+    return (nh, (; v_start, pp_start))
+end
+
+@inline COPSBenchmark.catmix_model(b::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...) =
+    ExaModels.ExaModel(
+        COPSBenchmark.catmix_recipe(b; T = T, backend = backend),
+        COPSBenchmark.catmix_args(b, nh; T = T)...;
+        kwargs...,
+    )
