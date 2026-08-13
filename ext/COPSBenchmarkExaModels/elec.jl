@@ -9,9 +9,10 @@
 # drawn and built in `elec_args`, which owns the seed, so the recipe holds no
 # randomness and the structure is the same whatever was drawn.
 @inline function COPSBenchmark.elec_recipe(
-    ::ExaModelsBackend; T = Float64, backend = nothing,
+    ::ExaModelsBackend; seed = 2713, T = Float64, backend = nothing,
 )
-    core, np, d = ExaModels.ExaCore(T; backend = backend, nargs = Val(2))
+    core, np = ExaModels.ExaCore(T; backend = backend, nargs = Val(1))
+    d = ExaModels.ArgNode1(Base.Fix2(COPSBenchmark.elec_data, seed), np)
 
     ExaModels.@add_var(core, x, 1:np; start = d.x0)
     ExaModels.@add_var(core, y, 1:np; start = d.y0)
@@ -26,24 +27,11 @@
     return core
 end
 
-@inline function COPSBenchmark.elec_args(::ExaModelsBackend, np; seed = 2713, T = Float64)
-    Random.seed!(seed)
-
-    # Set the starting point to a quasi-uniform distribution
-    # of electrons on a unit sphere
-    theta = (2pi) .* rand(np)
-    phi = pi .* rand(np)
-
-    x0 = [cos(theta[i])*sin(phi[i]) for i=1:np]
-    y0 = [sin(theta[i])*sin(phi[i]) for i=1:np]
-    z0 = [cos(phi[i]) for i=1:np]
-    itr = [(i,j) for i in 1:np-1 for j in i+1:np]
-    return (np, (; x0, y0, z0, itr))
-end
+@inline COPSBenchmark.elec_args(::ExaModelsBackend, np; seed = 2713, T = Float64) = (np,)
 
 @inline COPSBenchmark.elec_model(b::ExaModelsBackend, np; seed = 2713, T = Float64, backend = nothing, kwargs...) =
     ExaModels.ExaModel(
-        COPSBenchmark.elec_recipe(b; T = T, backend = backend),
+        COPSBenchmark.elec_recipe(b; seed = seed, T = T, backend = backend),
         COPSBenchmark.elec_args(b, np; seed = seed, T = T)...;
         kwargs...,
     )

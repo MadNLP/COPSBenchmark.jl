@@ -16,7 +16,8 @@
 @inline function COPSBenchmark.minsurf_recipe(
     ::ExaModelsBackend; T = Float64, backend = nothing,
 )
-    c, nx, ny, d = ExaModels.ExaCore(T; backend = backend, nargs = Val(3))
+    c, nx, ny = ExaModels.ExaCore(T; backend = backend, nargs = Val(2))
+    d = ExaModels.ArgNode2(COPSBenchmark.minsurf_data, nx, ny)
 
     hx = 1 / (nx + 1)
     hy = 1 / (ny + 1)
@@ -74,20 +75,7 @@
     return c
 end
 
-@inline function COPSBenchmark.minsurf_args(::ExaModelsBackend, nx::Int, ny::Int; T = Float64)
-    x_mesh = LinRange(0, 1, nx + 2) # coordinates of the mesh points x
-
-    v0 = zeros(nx + 2, ny + 2) # Surface matrix initialization
-    for i = 1:(nx + 2), j = 1:(ny + 2)
-        v0[i, j] = 1 - (2 * x_mesh[i] - 1)^2
-    end
-
-    hx = 1 / (nx + 1)
-    hy = 1 / (ny + 1)
-    c6_i = Int(floor(0.25 / hx)):Int(ceil(0.75 / hx))
-    c6_j = Int(floor(0.25 / hy)):Int(ceil(0.75 / hy))
-    return (nx, ny, (; v0, c6_i, c6_j))
-end
+@inline COPSBenchmark.minsurf_args(::ExaModelsBackend, nx::Int, ny::Int; T = Float64) = (nx, ny)
 
 @inline COPSBenchmark.minsurf_model(b::ExaModelsBackend, nx::Int, ny::Int; T = Float64, backend = nothing, kwargs...) =
     ExaModels.ExaModel(

@@ -17,12 +17,13 @@
     xf = [T(NaN), T(5), T(45), T(0)]
     half = T(0.5)
 
-    core, nh, x_start = ExaModels.ExaCore(T; backend = backend, nargs = Val(2))
+    core, nh = ExaModels.ExaCore(T; backend = backend, nargs = Val(1))
+    d = ExaModels.ArgNode1(COPSBenchmark.steering_data, nh)
 
     inv_nh = one(T) / nh
 
     ExaModels.@add_var(core, u, 1:nh+1; lvar = u_min, uvar =  u_max, start=T(0))   # control
-    ExaModels.@add_var(core, x, 1:nh+1, 1:4; start=x_start)     # state
+    ExaModels.@add_var(core, x, 1:nh+1, 1:4; start=d.x_start)     # state
     ExaModels.@add_var(core, tf, 1; start=T(1))                 # final time
 
     ExaModels.@add_obj(core, tf[1])
@@ -41,21 +42,7 @@
     return core
 end
 
-@inline function COPSBenchmark.steering_args(::ExaModelsBackend, nh; T = Float64)
-    inv_nh = T(1) / T(nh)
-    function gen_x0(k, i)
-        if i == 1 || i == 4
-            return T(0)
-        elseif i == 2
-            return T(5)*T(k)*inv_nh
-        elseif i == 3
-            return T(45)*T(k)*inv_nh
-        else
-            return T(0)
-        end
-    end
-    return (nh, [gen_x0(i, j) for i=1:nh+1, j=1:4])
-end
+@inline COPSBenchmark.steering_args(::ExaModelsBackend, nh; T = Float64) = (nh,)
 
 @inline COPSBenchmark.steering_model(b::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...) =
     ExaModels.ExaModel(

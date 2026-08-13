@@ -20,7 +20,8 @@
     tf = T(36420)                           # tau[nm]
     zero_T = T(0)
 
-    core, nh, d = ExaModels.ExaCore(T; backend = backend, nargs = Val(2))
+    core, nh = ExaModels.ExaCore(T; backend = backend, nargs = Val(1))
+    d = ExaModels.ArgNode1(COPSBenchmark.pinene_data, nh)
 
     h = tf / nh                             # uniform interval length
 
@@ -67,44 +68,7 @@
     return core
 end
 
-@inline function COPSBenchmark.pinene_args(::ExaModelsBackend, nh; T = Float64)
-    nc = 3
-    ne = 5
-    nm = 8
-    bc = T[100, 0, 0, 0, 0]
-    tau = T[1230, 3060, 4920, 7800, 10680, 15030, 22620, 36420]
-    tf = tau[nm]
-    h = tf / T(nh)
-    t = T[T(i-1)*h for i in 1:nh+1]
-    itau = Int[min(nh, Int(floor(tau[i]/h))+1) for i in 1:nm]
-
-    z = reshape(T[
-        88.35,  7.3,  2.3,  0.4,  1.75,
-        76.4,  15.6,  4.5,  0.7,  2.8,
-        65.1,  23.1,  5.3,  1.1,  5.8,
-        50.4,  32.9,  6.0,  1.5,  9.3,
-        37.5,  42.7,  6.0,  1.9, 12.0,
-        25.9,  49.1,  5.9,  2.2, 17.0,
-        14.0,  57.4,  5.1,  2.6, 21.0,
-        4.5,  63.1,  3.8,  2.9, 25.7,
-    ], ne, nm)'
-
-    v0 = zeros(T, nh, ne)
-    for i in 1:itau[1], s in 1:ne
-        v0[i, s] = bc[s]
-    end
-    for j in 2:nm, i =itau[j-1]+1:itau[j], s in 1:ne
-        v0[i, s] = z[j, s]
-    end
-    for i in itau[nm]+1:nh, s in 1:ne
-        v0[i, s] = z[nm, s]
-    end
-
-    v_start  = [v0[i, s] for i=1:nh, s=1:ne]
-    uc_start = [v0[i, s] for i=1:nh, j=1:nc, s=1:ne]
-    itr = [(j, s, itau[j], tau[j], t[itau[j]], z[j,s]) for j=1:nm, s in 1:ne]
-    return (nh, (; v_start, uc_start, itr))
-end
+@inline COPSBenchmark.pinene_args(::ExaModelsBackend, nh; T = Float64) = (nh,)
 
 @inline COPSBenchmark.pinene_model(b::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...) =
     ExaModels.ExaModel(

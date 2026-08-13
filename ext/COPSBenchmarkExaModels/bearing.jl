@@ -13,7 +13,8 @@
     b = 10              # grid is (0,2*pi)x(0,2*b)
     e = 0.1             # eccentricity
 
-    core, nx, ny, d = ExaModels.ExaCore(T; backend = backend, nargs = Val(3))
+    core, nx, ny = ExaModels.ExaCore(T; backend = backend, nargs = Val(2))
+    d = ExaModels.ArgNode2(COPSBenchmark.bearing_data, nx, ny)
 
     hx = 2*pi / (nx+1)  # grid spacing
     hy = 2*b / (ny+1)   # grid spacing
@@ -41,20 +42,7 @@
     return core
 end
 
-@inline function COPSBenchmark.bearing_args(::ExaModelsBackend, nx, ny; T = Float64)
-    b = 10
-    e = 0.1
-    hx = 2*pi / (nx+1)
-    hy = 2*b / (ny+1)
-    wq(i) = (1.0 + e*cos((i-1)*hx))^3
-    v0 = [max(sin((i-1)*hx), 0.0) for i in 1:nx+2, j in 1:ny+2]
-    # `wq` and the eccentricity term are per-row coefficients; they ride with
-    # the indices they belong to rather than being recomputed symbolically.
-    lower = [(i, j, wq(i), wq(i+1)) for i in 1:nx+1, j in 1:ny+1]
-    upper = [(i, j, wq(i), wq(i-1)) for i in 2:nx+2, j in 2:ny+2]
-    lin   = [(i, j, sin((i-1)*hx)) for i in 1:nx+2, j in 1:ny+2]
-    return (nx, ny, (; v0, lower, upper, lin))
-end
+@inline COPSBenchmark.bearing_args(::ExaModelsBackend, nx, ny; T = Float64) = (nx, ny)
 
 @inline COPSBenchmark.bearing_model(b::ExaModelsBackend, nx, ny; T = Float64, backend = nothing, kwargs...) =
     ExaModels.ExaModel(

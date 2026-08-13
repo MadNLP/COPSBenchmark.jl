@@ -26,7 +26,8 @@
     four_pi_3 = T(4) * pi_T / T(3)
     zero_T = T(0)
 
-    core, nh, d = ExaModels.ExaCore(T; backend = backend, nargs = Val(2))
+    core, nh = ExaModels.ExaCore(T; backend = backend, nargs = Val(1))
+    d = ExaModels.ArgNode1(COPSBenchmark.robot_data, nh)
 
     inv_nh = one(T) / nh
 
@@ -44,14 +45,9 @@
     # Final time
     ExaModels.@add_var(core, tf, 1; start = T(1), lvar = zero_T)
 
-    # The two moments of inertia were `@add_expr`s.  That macro stores its body
-    # as a closure, and in a recipe the closure captures `Variable`s whose types
-    # carry the placeholder, which `instantiate` cannot reach into.  A local
-    # helper is spliced at the point of use exactly as the subexpression was --
-    # `@add_expr` adds no variables and no constraints, only a name -- so the
-    # expression trees, and the model, are unchanged.
-    I_the(i) = ((L-rho[i])^3+rho[i]^3)*(sin(phi[i]))^2*third
-    I_phi(i) = ((L-rho[i])^3+rho[i]^3)*third
+    # Expressions (matching JuMP @expressions)
+    ExaModels.@add_expr(core, I_the, ((L-rho[i])^3+rho[i]^3)*(sin(phi[i]))^2*third for i=1:nh+1)
+    ExaModels.@add_expr(core, I_phi, ((L-rho[i])^3+rho[i]^3)*third for i=1:nh+1)
 
     ExaModels.@add_obj(core, tf[1] for i=1:1)
 
@@ -60,8 +56,8 @@
     ExaModels.@add_con(core, c2, - phi[j] + phi[j-1] + half * tf[1]*inv_nh * (phi_dot[j] + phi_dot[j-1]) for j=2:nh+1)
     ExaModels.@add_con(core, c3, - the[j] + the[j-1] + half * tf[1]*inv_nh * (the_dot[j] + the_dot[j-1]) for j=2:nh+1)
     ExaModels.@add_con(core, c4, - rho_dot[j] + rho_dot[j-1] + half * tf[1]*inv_nh * (u_rho[j] + u_rho[j-1]) / L for j=2:nh+1)
-    ExaModels.@add_con(core, c5, - the_dot[j] + the_dot[j-1] + half * tf[1]*inv_nh * (u_the[j] / I_the(j) + u_the[j-1] / I_the(j-1)) for j=2:nh+1)
-    ExaModels.@add_con(core, c6, - phi_dot[j] + phi_dot[j-1] + half * tf[1]*inv_nh * (u_phi[j] / I_phi(j) + u_phi[j-1] / I_phi(j-1)) for j=2:nh+1)
+    ExaModels.@add_con(core, c5, - the_dot[j] + the_dot[j-1] + half * tf[1]*inv_nh * (u_the[j] / I_the[j] + u_the[j-1] / I_the[j-1]) for j=2:nh+1)
+    ExaModels.@add_con(core, c6, - phi_dot[j] + phi_dot[j-1] + half * tf[1]*inv_nh * (u_phi[j] / I_phi[j] + u_phi[j-1] / I_phi[j-1]) for j=2:nh+1)
 
     # Boundary conditions
     ExaModels.@add_con(core, c7, - rho[1] + rho0)
@@ -80,15 +76,7 @@
     return core
 end
 
-@inline function COPSBenchmark.robot_args(::ExaModelsBackend, nh; T = Float64)
-    pi_T = T(pi)
-    inv_nh = T(1) / T(nh)
-    two_pi_3 = T(2) * pi_T / T(3)
-    four_pi_3 = T(4) * pi_T / T(3)
-    the_start     = [two_pi_3*(T(k)*inv_nh)^2 for k=1:nh+1]
-    the_dot_start = [four_pi_3*(T(k)*inv_nh) for k=1:nh+1]
-    return (nh, (; the_start, the_dot_start))
-end
+@inline COPSBenchmark.robot_args(::ExaModelsBackend, nh; T = Float64) = (nh,)
 
 @inline COPSBenchmark.robot_model(b::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...) =
     ExaModels.ExaModel(

@@ -24,7 +24,8 @@
     one_T = T(1)
     rho_index = [(i, rho[i]) for i in 1:nc]
 
-    core, nh, d = ExaModels.ExaCore(T; backend = backend, nargs = Val(2))
+    core, nh = ExaModels.ExaCore(T; backend = backend, nargs = Val(1))
+    d = ExaModels.ArgNode1(COPSBenchmark.catmix_data, nh)
 
     h = one(T) / nh   # Final time / nh
 
@@ -83,13 +84,7 @@
     return core
 end
 
-@inline function COPSBenchmark.catmix_args(::ExaModelsBackend, nh; T = Float64)
-    ne = 2
-    nc = 3
-    v_start  = T[mod(j, ne) for i in 1:nh, j in 1:ne]
-    pp_start = T[mod(k, ne) for i in 1:nh, j in 1:nc, k in 1:ne]
-    return (nh, (; v_start, pp_start))
-end
+@inline COPSBenchmark.catmix_args(::ExaModelsBackend, nh; T = Float64) = (nh,)
 
 @inline COPSBenchmark.catmix_model(b::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...) =
     ExaModels.ExaModel(

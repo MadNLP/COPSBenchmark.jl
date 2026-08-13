@@ -21,7 +21,8 @@
     two_T = T(2)
     bc = T[1, 0, 0]
 
-    c, nh, d = ExaModels.ExaCore(T; backend = backend, nargs = Val(2))
+    c, nh = ExaModels.ExaCore(T; backend = backend, nargs = Val(1))
+    d = ExaModels.ArgNode1(COPSBenchmark.methanol_data, nh)
 
     h = tf / nh                           # uniform interval length
 
@@ -82,41 +83,7 @@
     return c
 end
 
-@inline function COPSBenchmark.methanol_args(::ExaModelsBackend, nh; T = Float64)
-    ne = 3
-    nm = 17
-    tau = T[
-        0., 0.050, 0.065, 0.080, 0.123, 0.233, 0.273, 0.354, 0.397, 0.418,
-        0.502, 0.553, 0.681, 0.750, 0.916, 0.937, 1.122,
-    ]
-    tf = tau[nm]
-    h = tf / T(nh)
-    t = T[T(i-1)*h for i in 1:nh+1]
-    itau = Int[min(nh, Int(floor(tau[i]/h))+1) for i in 1:nm]
-
-    z = reshape(T[
-        1.0000, 0.0000, 0.0000,
-        0.7085, 0.1621, 0.0811,
-        0.5971, 0.1855, 0.0965,
-        0.5537, 0.1989, 0.1198,
-        0.3684, 0.2845, 0.1535,
-        0.1712, 0.3491, 0.2097,
-        0.1198, 0.3098, 0.2628,
-        0.0747, 0.3576, 0.2467,
-        0.0529, 0.3347, 0.2884,
-        0.0415, 0.3388, 0.2757,
-        0.0261, 0.3557, 0.3167,
-        0.0208, 0.3483, 0.2954,
-        0.0085, 0.3836, 0.2950,
-        0.0053, 0.3611, 0.2937,
-        0.0019, 0.3609, 0.2831,
-        0.0018, 0.3485, 0.2846,
-        0.0006, 0.3698, 0.2899,
-    ], ne, nm)'
-
-    con1_matrix = [(j, s, itau[j], tau[j], z[j,s], t[itau[j]]) for j in 1:nm, s in 1:ne]
-    return (nh, (; con1_matrix))
-end
+@inline COPSBenchmark.methanol_args(::ExaModelsBackend, nh; T = Float64) = (nh,)
 
 @inline COPSBenchmark.methanol_model(b::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...) =
     ExaModels.ExaModel(

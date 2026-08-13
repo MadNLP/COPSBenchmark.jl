@@ -14,7 +14,8 @@
 )
     bc = T[0.0 1.0; 0.0 0.0]
 
-    core, nh, d = ExaModels.ExaCore(T; backend = backend, nargs = Val(2))
+    core, nh = ExaModels.ExaCore(T; backend = backend, nargs = Val(1))
+    d = ExaModels.ArgNode1(COPSBenchmark.channel_data, nh)
 
     ExaModels.@add_var(core, v, nh, 4; start = d.v0)
     ExaModels.@add_var(core, w, nh, 4; start = 0.0)
@@ -71,76 +72,7 @@
     return core
 end
 
-@inline function COPSBenchmark.channel_args(::ExaModelsBackend, nh; T = Float64)
-    nc = 4
-    nd = 4
-    tf = T(1.0)
-    h = tf / nh
-
-    rho = T[0.06943184420297, 0.33000947820757, 0.66999052179243, 0.93056815579703]
-    t = T[(i-1)*h for i in 1:nh+1]
-
-    # Initial value
-    v0 = zeros(T, nh, nd)
-    for i in 1:nh
-        v0[i, 1] = t[i]^2*(3 - 2*t[i])
-        v0[i, 2] = 6*t[i]*(1 - t[i])
-        v0[i, 3] = 6*(1 - 2*t[i])
-        v0[i, 4] = -12
-    end
-    uc0 = T[v0[i, s] for i in 1:nh, j in 1:nc, s in 1:nd]
-
-    # fac[k+1] = k!
-    fac = T[factorial(k) for k in 0:nc+nd]
-
-    con1_itr = [
-        (i, j, s, h*rho[j]^1/fac[2], h*rho[j]^2/fac[3], h*rho[j]^3/fac[4], h*rho[j]^4/fac[5])
-        for i in 1:nh, j in 1:nc, s in 1:nd
-    ]
-
-    con2_itr = [
-        (i, j, s,
-         (s <= 1 ? (rho[j]*h)^(1-s)/fac[1-s+1] : zero(T)),
-         (s <= 2 ? (rho[j]*h)^(2-s)/fac[2-s+1] : zero(T)),
-         (s <= 3 ? (rho[j]*h)^(3-s)/fac[3-s+1] : zero(T)),
-         (s <= 4 ? (rho[j]*h)^(4-s)/fac[4-s+1] : zero(T)),
-         h^(nd-s+1)*rho[j]^(1+nd-s)/fac[1+nd-s+1],
-         h^(nd-s+1)*rho[j]^(2+nd-s)/fac[2+nd-s+1],
-         h^(nd-s+1)*rho[j]^(3+nd-s)/fac[3+nd-s+1],
-         h^(nd-s+1)*rho[j]^(4+nd-s)/fac[4+nd-s+1])
-        for i in 1:nh, j in 1:nc, s in 1:nd
-    ]
-
-    cont_itr = [
-        (i, s,
-         (s <= 1 ? h^(1-s)/fac[1-s+1] : zero(T)),
-         (s <= 2 ? h^(2-s)/fac[2-s+1] : zero(T)),
-         (s <= 3 ? h^(3-s)/fac[3-s+1] : zero(T)),
-         (s <= 4 ? h^(4-s)/fac[4-s+1] : zero(T)),
-         h^(nd-s+1)/fac[1+nd-s+1],
-         h^(nd-s+1)/fac[2+nd-s+1],
-         h^(nd-s+1)/fac[3+nd-s+1],
-         h^(nd-s+1)/fac[4+nd-s+1])
-        for i in 1:nh-1, s in 1:nd
-    ]
-
-    coll_itr = [
-        (i, j, rho[j]^0/fac[1], rho[j]^1/fac[2], rho[j]^2/fac[3], rho[j]^3/fac[4])
-        for i in 1:nh, j in 1:nc
-    ]
-
-    # right BC coefficients, carried with the row index they apply to
-    bc3_cv = [h^(k-1)/fac[k] for k in 1:nd]
-    bc3_cw = [h^nd/fac[k+nd] for k in 1:nc]
-    bc4_cv = [h^(k-2)/fac[k-1] for k in 2:nd]
-    bc4_cw = [h^(nd-1)/fac[k+nd-1] for k in 1:nc]
-    bc3_itr = [(nh, bc3_cv[1], bc3_cv[2], bc3_cv[3], bc3_cv[4],
-                    bc3_cw[1], bc3_cw[2], bc3_cw[3], bc3_cw[4])]
-    bc4_itr = [(nh, bc4_cv[1], bc4_cv[2], bc4_cv[3],
-                    bc4_cw[1], bc4_cw[2], bc4_cw[3], bc4_cw[4])]
-
-    return (nh, (; v0, uc0, con1_itr, con2_itr, cont_itr, coll_itr, bc3_itr, bc4_itr))
-end
+@inline COPSBenchmark.channel_args(::ExaModelsBackend, nh; T = Float64) = (nh,)
 
 @inline COPSBenchmark.channel_model(b::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...) =
     ExaModels.ExaModel(

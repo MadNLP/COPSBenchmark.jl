@@ -13,7 +13,8 @@
 @inline function COPSBenchmark.polygon_recipe(
     ::ExaModelsBackend; T = Float64, backend = nothing,
 )
-    c, N, d = ExaModels.ExaCore(T; backend = backend, nargs = Val(2))
+    c, N = ExaModels.ExaCore(T; backend = backend, nargs = Val(1))
+    d = ExaModels.ArgNode1(COPSBenchmark.polygon_data, N)
 
     ExaModels.@add_var(c, r, N; lvar = 0.0, uvar = 1.0, start = 1.0)
     ExaModels.@add_var(c, θ, N; lvar = 0.0, uvar = T(π), start = d.θ0)
@@ -34,12 +35,7 @@
     return c
 end
 
-@inline function COPSBenchmark.polygon_args(::ExaModelsBackend, n::Int; T = Float64)
-    N = div(n, 2)
-    θ0 = [i * π / (N - 1) - π / (N - 1) for i in 1:N]
-    pairs = [(i, j) for i in 1:N-1 for j in i+1:N]
-    return (N, (; θ0, pairs))
-end
+@inline COPSBenchmark.polygon_args(::ExaModelsBackend, n::Int; T = Float64) = (div(n, 2),)
 
 @inline COPSBenchmark.polygon_model(b::ExaModelsBackend, n::Int; T = Float64, backend = nothing, kwargs...) =
     ExaModels.ExaModel(

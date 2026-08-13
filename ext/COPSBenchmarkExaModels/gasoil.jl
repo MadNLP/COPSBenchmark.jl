@@ -22,7 +22,8 @@
     zero_T = T(0)
     z1 = T[1.0000, 0.0000]
 
-    core, nh, d = ExaModels.ExaCore(T; backend = backend, nargs = Val(2))
+    core, nh = ExaModels.ExaCore(T; backend = backend, nargs = Val(1))
+    d = ExaModels.ArgNode1(COPSBenchmark.gasoil_data, nh)
 
     h = tf / nh
 
@@ -77,60 +78,7 @@
     return core
 end
 
-@inline function COPSBenchmark.gasoil_args(::ExaModelsBackend, nh; T = Float64)
-    nc = 4
-    ne = 2
-    nm = 21
-    rho = T[0.06943184420297, 0.33000947820757, 0.66999052179243, 0.93056815579703]
-    bc = [1, 1, 2, 0]
-    tau = T[0.0, 0.025, 0.05, 0.075, 0.10, 0.125, 0.150, 0.175, 0.20, 0.225, 0.250, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.65, 0.75, 0.85, 0.95]
-    tf = tau[nm]
-    h = tf / T(nh)
-    t = T[T(i-1)*h for i in 1:nh+1]
-
-    itau = Int[min(nh, Int(floor(tau[i]/h))+1) for i in 1:nm]
-
-    z = reshape(T[
-        1.0000, 0.0000,
-        0.8105, 0.2000,
-        0.6208, 0.2886,
-        0.5258, 0.3010,
-        0.4345, 0.3215,
-        0.3903, 0.3123,
-        0.3342, 0.2716,
-        0.3034, 0.2551,
-        0.2735, 0.2258,
-        0.2405, 0.1959,
-        0.2283, 0.1789,
-        0.2071, 0.1457,
-        0.1669, 0.1198,
-        0.1530, 0.0909,
-        0.1339, 0.0719,
-        0.1265, 0.0561,
-        0.1200, 0.0460,
-        0.0990, 0.0280,
-        0.0870, 0.0190,
-        0.0770, 0.0140,
-        0.0690, 0.0100,
-    ], ne, nm)'
-
-    v0 = zeros(T, nh, ne)
-    for i in 1:itau[1], s in 1:ne
-        v0[i, s] = T(bc[s])
-    end
-    for j in 2:nm, i =itau[j-1]+1:itau[j], s in 1:ne
-        v0[i, s] = z[j, s]
-    end
-    for i in itau[nm]+1:nh, s in 1:ne
-        v0[i, s] = z[nm, s]
-    end
-
-    v_start  = [v0[i, s] for i = 1:nh, s = 1:ne]
-    uc_start = [v0[i, s] for i = 1:nh, j = 1:nc, s = 1:ne]
-    itr = [(j, s, itau[j], tau[j], t[itau[j]], z[j,s]) for j=1:nm, s in 1:ne]
-
-    return (nh, (; v_start, uc_start, itr))
-end
+@inline COPSBenchmark.gasoil_args(::ExaModelsBackend, nh; T = Float64) = (nh,)
 
 @inline COPSBenchmark.gasoil_model(b::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...) =
     ExaModels.ExaModel(

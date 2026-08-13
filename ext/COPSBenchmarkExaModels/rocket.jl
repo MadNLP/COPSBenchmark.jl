@@ -26,16 +26,17 @@
     D_c = half * v_c * (m_0 / g_0)
     T_max = T_c * m_0 * g_0
 
-    core, nh, s_v_start, s_m_start = ExaModels.ExaCore(
-        T; backend = backend, minimize = false, nargs = Val(3),
+    core, nh = ExaModels.ExaCore(
+        T; backend = backend, minimize = false, nargs = Val(1),
     )
+    d = ExaModels.ArgNode1(COPSBenchmark.rocket_data, nh)
 
     inv_nh = one(T) / nh
     s_Th_start = T_max*half
 
     ExaModels.@add_var(core, h, 0:nh; start=h_0, lvar = h_0)
-    ExaModels.@add_var(core, v, 0:nh; start=s_v_start, lvar = v_0)
-    ExaModels.@add_var(core, m, 0:nh; start=s_m_start, lvar = m_f, uvar = m_0)
+    ExaModels.@add_var(core, v, 0:nh; start=d.v_start, lvar = v_0)
+    ExaModels.@add_var(core, m, 0:nh; start=d.m_start, lvar = m_f, uvar = m_0)
     ExaModels.@add_var(core, Th, 0:nh; start=s_Th_start, lvar = v_0, uvar = T_max)
     ExaModels.@add_var(core, step, 1; start=inv_nh, lvar = v_0)
 
@@ -56,16 +57,7 @@
     return core
 end
 
-@inline function COPSBenchmark.rocket_args(::ExaModelsBackend, nh; T = Float64)
-    m_0 = T(1)
-    m_f = T(0.6) * m_0
-    inv_nh = T(1) / T(nh)
-    # Precompute generator scalars so the broadcast closure stays isbits
-    # (Metal rejects Type{T} captures).
-    s_v_start = T[T(i)*inv_nh*(T(1) - T(i)*inv_nh) for i=0:nh]
-    s_m_start = T[(m_f - m_0)*(T(i)*inv_nh) + m_0 for i=0:nh]
-    return (nh, s_v_start, s_m_start)
-end
+@inline COPSBenchmark.rocket_args(::ExaModelsBackend, nh; T = Float64) = (nh,)
 
 @inline COPSBenchmark.rocket_model(b::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...) =
     ExaModels.ExaModel(

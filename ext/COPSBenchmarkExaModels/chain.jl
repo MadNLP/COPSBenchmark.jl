@@ -19,7 +19,8 @@
     b = 3
     tf = 1.0
 
-    c, nh, d = ExaModels.ExaCore(T; backend = backend, nargs = Val(2))
+    c, nh = ExaModels.ExaCore(T; backend = backend, nargs = Val(1))
+    d = ExaModels.ArgNode1(COPSBenchmark.chain_data, nh)
 
     h = tf / nh
 
@@ -82,18 +83,7 @@
     return c
 end
 
-@inline function COPSBenchmark.chain_args(::ExaModelsBackend, n; T = Float64)
-    nh = max(2, div(n - 4, 4))
-    a = 1
-    b = 3
-    tmin = b > a ? 1 / 4 : 3 / 4
-    u0  = [4 * abs(b - a) * (k / nh - tmin) for k in 1:nh+1]
-    x10 = [4 * abs(b - a) * k / nh * (1 / 2 * k / nh - tmin) + a for k in 1:nh+1]
-    x20 = [(4 * abs(b - a) * k / nh * (1 / 2 * k / nh - tmin) + a) *
-           (4 * abs(b - a) * (k / nh - tmin)) for k in 1:nh+1]
-    x30 = [4 * abs(b - a) * (k / nh - tmin) for k in 1:nh+1]
-    return (nh, (; u0, x10, x20, x30))
-end
+@inline COPSBenchmark.chain_args(::ExaModelsBackend, n; T = Float64) = (max(2, div(n - 4, 4)),)
 
 @inline COPSBenchmark.chain_model(b::ExaModelsBackend, n; T = Float64, backend = nothing, kwargs...) =
     ExaModels.ExaModel(
