@@ -234,3 +234,48 @@ end
         @test sort(abs.(eigvals(H_jump))) ≈ sort(abs.(eigvals(H_exa))) atol = 1e-6
     end
 end
+
+# ── Recipes ───────────────────────────────────────────────────────────────────
+# A recipe is the model's structure with its sizes left open; `*_args` supplies
+# the values that close it, and `*_model` is the two composed.  Two properties
+# `*_model` cannot show are checked here: the core really is open (it declares
+# its arity and its variable count is an expression), and it is not consumed by
+# being used — one core instantiates at two sizes and again at the first, each
+# time matching what `*_model` builds at that size.
+RECIPE_INSTANCES = [
+    (name, params) for (name, params) in [
+        ("bearing", (8, 8)), ("camshape", (60,)), ("catmix", (8,)),
+        ("chain", (60,)), ("channel", (12,)), ("elec", (15,)),
+        ("gasoil", (8,)), ("glider", (8,)), ("marine", (8,)),
+        ("methanol", (8,)), ("minsurf", (8, 8)), ("pinene", (8,)),
+        ("polygon", (30,)), ("robot", (12,)), ("rocket", (12,)),
+        ("steering", (12,)), ("torsion", (8, 8)),
+    ]
+]
+
+@testset "Recipe: $name" for (name, params) in RECIPE_INSTANCES
+    B = COPSBenchmark.ExaModelsBackend()
+    recipe = getfield(COPSBenchmark, Symbol(name, "_recipe"))
+    argsf  = getfield(COPSBenchmark, Symbol(name, "_args"))
+    modelf = getfield(COPSBenchmark, Symbol(name, "_model"))
+
+    core = recipe(B)
+    @test core.nargs === Val(length(argsf(B, params...)))
+    @test core.nvar isa ExaModels.AbstractArgNode
+
+    bigger = map(p -> p + 4, params)
+    first_meta = nothing
+    for ps in (params, bigger)
+        m = ExaModels.ExaModel(core, argsf(B, ps...)...)
+        r = modelf(B, ps...)
+        @test m.meta.nvar == r.meta.nvar
+        @test m.meta.ncon == r.meta.ncon
+        @test m.meta.x0 == r.meta.x0
+        x = r.meta.x0 .+ 0.001 .* (1:r.meta.nvar)
+        @test NLPModels.obj(m, x) == NLPModels.obj(r, x)
+        @test NLPModels.grad(m, x) == NLPModels.grad(r, x)
+        ps == params && (first_meta = (m.meta.nvar, m.meta.ncon, copy(m.meta.x0)))
+    end
+    again = ExaModels.ExaModel(core, argsf(B, params...)...)
+    @test (again.meta.nvar, again.meta.ncon, again.meta.x0) == first_meta
+end
