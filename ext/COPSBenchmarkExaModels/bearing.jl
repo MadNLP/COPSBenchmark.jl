@@ -42,11 +42,11 @@
     return core
 end
 
-@inline COPSBenchmark.bearing_args(::ExaModelsBackend, nx, ny; T = Float64) = (nx, ny)
+@inline COPSBenchmark.bearing_args(::ExaModelsBackend, nx, ny) = (nx, ny)
 
 @inline COPSBenchmark.bearing_model(b::ExaModelsBackend, nx, ny; T = Float64, backend = nothing, kwargs...) =
     ExaModels.ExaModel(
         COPSBenchmark.bearing_recipe(b; T = T, backend = backend),
-        COPSBenchmark.bearing_args(b, nx, ny; T = T)...;
+        COPSBenchmark.bearing_args(b, nx, ny)...;
         kwargs...,
     )

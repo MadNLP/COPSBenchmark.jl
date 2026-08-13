@@ -18,7 +18,7 @@
     half = T(0.5)
 
     core, nh = ExaModels.ExaCore(T; backend = backend, nargs = Val(1))
-    d = ExaModels.ArgNode1(COPSBenchmark.steering_data, nh)
+    d = ExaModels.ArgCall(COPSBenchmark.steering_data, (Val(T), nh))
 
     inv_nh = one(T) / nh
 
@@ -42,11 +42,11 @@
     return core
 end
 
-@inline COPSBenchmark.steering_args(::ExaModelsBackend, nh; T = Float64) = (nh,)
+@inline COPSBenchmark.steering_args(::ExaModelsBackend, nh) = (nh,)
 
 @inline COPSBenchmark.steering_model(b::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...) =
     ExaModels.ExaModel(
         COPSBenchmark.steering_recipe(b; T = T, backend = backend),
-        COPSBenchmark.steering_args(b, nh; T = T)...;
+        COPSBenchmark.steering_args(b, nh)...;
         kwargs...,
     )

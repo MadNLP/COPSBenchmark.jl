@@ -21,7 +21,7 @@
     zero_T = T(0)
 
     core, nh = ExaModels.ExaCore(T; backend = backend, nargs = Val(1))
-    d = ExaModels.ArgNode1(COPSBenchmark.pinene_data, nh)
+    d = ExaModels.ArgCall(COPSBenchmark.pinene_data, (Val(T), nh))
 
     h = tf / nh                             # uniform interval length
 
@@ -68,11 +68,11 @@
     return core
 end
 
-@inline COPSBenchmark.pinene_args(::ExaModelsBackend, nh; T = Float64) = (nh,)
+@inline COPSBenchmark.pinene_args(::ExaModelsBackend, nh) = (nh,)
 
 @inline COPSBenchmark.pinene_model(b::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...) =
     ExaModels.ExaModel(
         COPSBenchmark.pinene_recipe(b; T = T, backend = backend),
-        COPSBenchmark.pinene_args(b, nh; T = T)...;
+        COPSBenchmark.pinene_args(b, nh)...;
         kwargs...,
     )

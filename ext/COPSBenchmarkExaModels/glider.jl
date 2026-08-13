@@ -32,7 +32,7 @@
     one_T = T(1)
 
     c, nh = ExaModels.ExaCore(T; backend = backend, nargs = Val(1))
-    d = ExaModels.ArgNode1(COPSBenchmark.glider_data, nh)
+    d = ExaModels.ArgCall(COPSBenchmark.glider_data, (Val(T), nh))
 
     inv_nh = one(T) / nh
 
@@ -73,11 +73,11 @@
     return c
 end
 
-@inline COPSBenchmark.glider_args(::ExaModelsBackend, nh; T = Float64) = (nh,)
+@inline COPSBenchmark.glider_args(::ExaModelsBackend, nh) = (nh,)
 
 @inline COPSBenchmark.glider_model(b::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...) =
     ExaModels.ExaModel(
         COPSBenchmark.glider_recipe(b; T = T, backend = backend),
-        COPSBenchmark.glider_args(b, nh; T = T)...;
+        COPSBenchmark.glider_args(b, nh)...;
         kwargs...,
     )

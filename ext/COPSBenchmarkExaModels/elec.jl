@@ -12,7 +12,7 @@
     ::ExaModelsBackend; seed = 2713, T = Float64, backend = nothing,
 )
     core, np = ExaModels.ExaCore(T; backend = backend, nargs = Val(1))
-    d = ExaModels.ArgNode1(Base.Fix2(COPSBenchmark.elec_data, seed), np)
+    d = ExaModels.ArgCall(COPSBenchmark.elec_data, (np, seed))
 
     ExaModels.@add_var(core, x, 1:np; start = d.x0)
     ExaModels.@add_var(core, y, 1:np; start = d.y0)
@@ -27,11 +27,11 @@
     return core
 end
 
-@inline COPSBenchmark.elec_args(::ExaModelsBackend, np; seed = 2713, T = Float64) = (np,)
+@inline COPSBenchmark.elec_args(::ExaModelsBackend, np) = (np,)
 
 @inline COPSBenchmark.elec_model(b::ExaModelsBackend, np; seed = 2713, T = Float64, backend = nothing, kwargs...) =
     ExaModels.ExaModel(
         COPSBenchmark.elec_recipe(b; seed = seed, T = T, backend = backend),
-        COPSBenchmark.elec_args(b, np; seed = seed, T = T)...;
+        COPSBenchmark.elec_args(b, np)...;
         kwargs...,
     )

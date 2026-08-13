@@ -22,7 +22,7 @@
     bc = T[1, 0, 0]
 
     c, nh = ExaModels.ExaCore(T; backend = backend, nargs = Val(1))
-    d = ExaModels.ArgNode1(COPSBenchmark.methanol_data, nh)
+    d = ExaModels.ArgCall(COPSBenchmark.methanol_data, (Val(T), nh))
 
     h = tf / nh                           # uniform interval length
 
@@ -83,11 +83,11 @@
     return c
 end
 
-@inline COPSBenchmark.methanol_args(::ExaModelsBackend, nh; T = Float64) = (nh,)
+@inline COPSBenchmark.methanol_args(::ExaModelsBackend, nh) = (nh,)
 
 @inline COPSBenchmark.methanol_model(b::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...) =
     ExaModels.ExaModel(
         COPSBenchmark.methanol_recipe(b; T = T, backend = backend),
-        COPSBenchmark.methanol_args(b, nh; T = T)...;
+        COPSBenchmark.methanol_args(b, nh)...;
         kwargs...,
     )

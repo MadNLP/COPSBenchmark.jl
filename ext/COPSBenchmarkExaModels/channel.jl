@@ -15,7 +15,7 @@
     bc = T[0.0 1.0; 0.0 0.0]
 
     core, nh = ExaModels.ExaCore(T; backend = backend, nargs = Val(1))
-    d = ExaModels.ArgNode1(COPSBenchmark.channel_data, nh)
+    d = ExaModels.ArgCall(COPSBenchmark.channel_data, (Val(T), nh))
 
     ExaModels.@add_var(core, v, nh, 4; start = d.v0)
     ExaModels.@add_var(core, w, nh, 4; start = 0.0)
@@ -72,11 +72,11 @@
     return core
 end
 
-@inline COPSBenchmark.channel_args(::ExaModelsBackend, nh; T = Float64) = (nh,)
+@inline COPSBenchmark.channel_args(::ExaModelsBackend, nh) = (nh,)
 
 @inline COPSBenchmark.channel_model(b::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...) =
     ExaModels.ExaModel(
         COPSBenchmark.channel_recipe(b; T = T, backend = backend),
-        COPSBenchmark.channel_args(b, nh; T = T)...;
+        COPSBenchmark.channel_args(b, nh)...;
         kwargs...,
     )

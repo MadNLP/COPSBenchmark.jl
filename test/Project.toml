@@ -11,4 +11,10 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [sources]
-ExaModels = {rev = "main", url = "https://github.com/exanauts/ExaModels.jl"}
+# The recipe API (`nargs`, deferred argument nodes) is on ExaModels main and in
+# no tagged release yet; without this pin CI resolves the registry's v0.11.x
+# and every ExaModels-backend test fails on the `nargs` keyword.  This pin
+# tracks the #308 branch because robot/glider recipes need `@add_expr`-as-node,
+# which is there and not yet on main — REPOINT to main when #308 merges, and
+# drop the pin once a release carries the API.
+ExaModels = {rev = "abi/multi-model-producer", url = "https://github.com/madsuite-org/ExaModels.jl"}

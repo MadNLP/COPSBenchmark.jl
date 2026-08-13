@@ -23,7 +23,7 @@
     z1 = T[1.0000, 0.0000]
 
     core, nh = ExaModels.ExaCore(T; backend = backend, nargs = Val(1))
-    d = ExaModels.ArgNode1(COPSBenchmark.gasoil_data, nh)
+    d = ExaModels.ArgNode2(COPSBenchmark.gasoil_data, Val(T), nh)
 
     h = tf / nh
 
@@ -78,11 +78,11 @@
     return core
 end
 
-@inline COPSBenchmark.gasoil_args(::ExaModelsBackend, nh; T = Float64) = (nh,)
+@inline COPSBenchmark.gasoil_args(::ExaModelsBackend, nh) = (nh,)
 
 @inline COPSBenchmark.gasoil_model(b::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...) =
     ExaModels.ExaModel(
         COPSBenchmark.gasoil_recipe(b; T = T, backend = backend),
-        COPSBenchmark.gasoil_args(b, nh; T = T)...;
+        COPSBenchmark.gasoil_args(b, nh)...;
         kwargs...,
     )

@@ -75,11 +75,11 @@
     return c
 end
 
-@inline COPSBenchmark.minsurf_args(::ExaModelsBackend, nx::Int, ny::Int; T = Float64) = (nx, ny)
+@inline COPSBenchmark.minsurf_args(::ExaModelsBackend, nx::Int, ny::Int) = (nx, ny)
 
 @inline COPSBenchmark.minsurf_model(b::ExaModelsBackend, nx::Int, ny::Int; T = Float64, backend = nothing, kwargs...) =
     ExaModels.ExaModel(
         COPSBenchmark.minsurf_recipe(b; T = T, backend = backend),
-        COPSBenchmark.minsurf_args(b, nx, ny; T = T)...;
+        COPSBenchmark.minsurf_args(b, nx, ny)...;
         kwargs...,
     )

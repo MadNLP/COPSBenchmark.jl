@@ -29,7 +29,7 @@
     core, nh = ExaModels.ExaCore(
         T; backend = backend, minimize = false, nargs = Val(1),
     )
-    d = ExaModels.ArgNode1(COPSBenchmark.rocket_data, nh)
+    d = ExaModels.ArgCall(COPSBenchmark.rocket_data, (Val(T), nh))
 
     inv_nh = one(T) / nh
     s_Th_start = T_max*half
@@ -57,11 +57,11 @@
     return core
 end
 
-@inline COPSBenchmark.rocket_args(::ExaModelsBackend, nh; T = Float64) = (nh,)
+@inline COPSBenchmark.rocket_args(::ExaModelsBackend, nh) = (nh,)
 
 @inline COPSBenchmark.rocket_model(b::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...) =
     ExaModels.ExaModel(
         COPSBenchmark.rocket_recipe(b; T = T, backend = backend),
-        COPSBenchmark.rocket_args(b, nh; T = T)...;
+        COPSBenchmark.rocket_args(b, nh)...;
         kwargs...,
     )

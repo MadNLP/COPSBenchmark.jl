@@ -83,11 +83,11 @@
     return c
 end
 
-@inline COPSBenchmark.chain_args(::ExaModelsBackend, n; T = Float64) = (max(2, div(n - 4, 4)),)
+@inline COPSBenchmark.chain_args(::ExaModelsBackend, n) = (max(2, div(n - 4, 4)),)
 
 @inline COPSBenchmark.chain_model(b::ExaModelsBackend, n; T = Float64, backend = nothing, kwargs...) =
     ExaModels.ExaModel(
         COPSBenchmark.chain_recipe(b; T = T, backend = backend),
-        COPSBenchmark.chain_args(b, n; T = T)...;
+        COPSBenchmark.chain_args(b, n)...;
         kwargs...,
     )

@@ -34,15 +34,11 @@ function catmix_recipe end
 function catmix_args end
 # Derived tables, reached from the recipe through a deferred call so the
 # recipe keeps a single placeholder -- which is all `P_new` carries.
-function catmix_data(nh; T = Float64)
+function catmix_data(::Val{T}, nh) where {T}
     ne = 2
     nc = 3
-    # Concrete element type, not the keyword `T`: inside a compiled library `T`
-    # is a runtime value and `T[...]` leaves `_array_for(T::Type, ...)`
-    # unresolved for `--trim=safe`.  The core converts on append, so the values
-    # land in the model's own type either way.
-    v_start  = Float64[mod(j, ne) for i in 1:nh, j in 1:ne]
-    pp_start = Float64[mod(k, ne) for i in 1:nh, j in 1:nc, k in 1:ne]
+    v_start  = T[mod(j, ne) for i in 1:nh, j in 1:ne]
+    pp_start = T[mod(k, ne) for i in 1:nh, j in 1:nc, k in 1:ne]
     return (; v_start, pp_start)
 end
 function chain_model end
@@ -50,7 +46,7 @@ function chain_recipe end
 function chain_args end
 # Derived tables, reached from the recipe through a deferred call so the
 # recipe keeps a single placeholder -- which is all `P_new` carries.
-function chain_data(nh; T = Float64)
+function chain_data(nh)
     a = 1
     b = 3
     tmin = b > a ? 1 / 4 : 3 / 4
@@ -66,14 +62,14 @@ function channel_recipe end
 function channel_args end
 # Derived tables, reached from the recipe through a deferred call so the
 # recipe keeps a single placeholder -- which is all `P_new` carries.
-function channel_data(nh; T = Float64)
+function channel_data(::Val{T}, nh) where {T}
     nc = 4
     nd = 4
     tf = T(1.0)
     h = tf / nh
 
-    rho = Float64[0.06943184420297, 0.33000947820757, 0.66999052179243, 0.93056815579703]
-    t = Float64[(i-1)*h for i in 1:nh+1]
+    rho = T[0.06943184420297, 0.33000947820757, 0.66999052179243, 0.93056815579703]
+    t = T[(i-1)*h for i in 1:nh+1]
 
     # Initial value
     v0 = zeros(T, nh, nd)
@@ -83,10 +79,10 @@ function channel_data(nh; T = Float64)
         v0[i, 3] = 6*(1 - 2*t[i])
         v0[i, 4] = -12
     end
-    uc0 = Float64[v0[i, s] for i in 1:nh, j in 1:nc, s in 1:nd]
+    uc0 = T[v0[i, s] for i in 1:nh, j in 1:nc, s in 1:nd]
 
     # fac[k+1] = k!
-    fac = Float64[factorial(k) for k in 0:nc+nd]
+    fac = T[factorial(k) for k in 0:nc+nd]
 
     con1_itr = Tuple{Int,Int,Int,T,T,T,T}[
         (i, j, s, h*rho[j]^1/fac[2], h*rho[j]^2/fac[3], h*rho[j]^3/fac[4], h*rho[j]^4/fac[5])
@@ -158,20 +154,20 @@ function gasoil_recipe end
 function gasoil_args end
 # Derived tables, reached from the recipe through a deferred call so the
 # recipe keeps a single placeholder -- which is all `P_new` carries.
-function gasoil_data(nh; T = Float64)
+function gasoil_data(::Val{T}, nh) where {T}
     nc = 4
     ne = 2
     nm = 21
-    rho = Float64[0.06943184420297, 0.33000947820757, 0.66999052179243, 0.93056815579703]
+    rho = T[0.06943184420297, 0.33000947820757, 0.66999052179243, 0.93056815579703]
     bc = [1, 1, 2, 0]
-    tau = Float64[0.0, 0.025, 0.05, 0.075, 0.10, 0.125, 0.150, 0.175, 0.20, 0.225, 0.250, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.65, 0.75, 0.85, 0.95]
+    tau = T[0.0, 0.025, 0.05, 0.075, 0.10, 0.125, 0.150, 0.175, 0.20, 0.225, 0.250, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.65, 0.75, 0.85, 0.95]
     tf = tau[nm]
     h = tf / T(nh)
-    t = Float64[T(i-1)*h for i in 1:nh+1]
+    t = T[T(i-1)*h for i in 1:nh+1]
 
     itau = Int[min(nh, Int(floor(tau[i]/h))+1) for i in 1:nm]
 
-    z = reshape(Float64[
+    z = reshape(T[
         1.0000, 0.0000,
         0.8105, 0.2000,
         0.6208, 0.2886,
@@ -216,7 +212,7 @@ function glider_recipe end
 function glider_args end
 # Derived tables, reached from the recipe through a deferred call so the
 # recipe keeps a single placeholder -- which is all `P_new` carries.
-function glider_data(nh; T = Float64)
+function glider_data(::Val{T}, nh) where {T}
     x_0 = T(0); y_0 = T(1000); y_f = T(900); vx_0 = T(13.23)
     inv_nh = T(1) / T(nh)
     x_start = [x_0 + vx_0*(T(k)*inv_nh) for k in 0:nh]
@@ -230,16 +226,16 @@ function marine_recipe end
 function marine_args end
 # Derived tables, reached from the recipe through a deferred call so the
 # recipe keeps a single placeholder -- which is all `P_new` carries.
-function marine_data(nh; T = Float64)
+function marine_data(::Val{T}, nh) where {T}
     ne = 8
     nm = 21
     tau = collect(T, range(T(0), T(10), 21))
     tf = tau[nm]
     h = tf / T(nh)
-    t = Float64[T(i-1)*h for i in 1:nh+1]
+    t = T[T(i-1)*h for i in 1:nh+1]
     itau = Int[min(nh, Int(floor(tau[i]/h))+1) for i in 1:nm]
 
-    z = reshape(Float64[
+    z = reshape(T[
         20000.0, 17000.0, 10000.0, 15000.0, 12000.0,  9000.0,  7000.0,  3000.0,
         12445.0, 15411.0, 13040.0, 13338.0, 13484.0,  8426.0,  6615.0,  4022.0,
         7705.0, 13074.0, 14623.0, 11976.0, 12453.0,  9272.0,  6891.0,  5020.0,
@@ -283,19 +279,19 @@ function methanol_recipe end
 function methanol_args end
 # Derived tables, reached from the recipe through a deferred call so the
 # recipe keeps a single placeholder -- which is all `P_new` carries.
-function methanol_data(nh; T = Float64)
+function methanol_data(::Val{T}, nh) where {T}
     ne = 3
     nm = 17
-    tau = Float64[
+    tau = T[
         0., 0.050, 0.065, 0.080, 0.123, 0.233, 0.273, 0.354, 0.397, 0.418,
         0.502, 0.553, 0.681, 0.750, 0.916, 0.937, 1.122,
     ]
     tf = tau[nm]
     h = tf / T(nh)
-    t = Float64[T(i-1)*h for i in 1:nh+1]
+    t = T[T(i-1)*h for i in 1:nh+1]
     itau = Int[min(nh, Int(floor(tau[i]/h))+1) for i in 1:nm]
 
-    z = reshape(Float64[
+    z = reshape(T[
         1.0000, 0.0000, 0.0000,
         0.7085, 0.1621, 0.0811,
         0.5971, 0.1855, 0.0965,
@@ -342,18 +338,18 @@ function pinene_recipe end
 function pinene_args end
 # Derived tables, reached from the recipe through a deferred call so the
 # recipe keeps a single placeholder -- which is all `P_new` carries.
-function pinene_data(nh; T = Float64)
+function pinene_data(::Val{T}, nh) where {T}
     nc = 3
     ne = 5
     nm = 8
-    bc = Float64[100, 0, 0, 0, 0]
-    tau = Float64[1230, 3060, 4920, 7800, 10680, 15030, 22620, 36420]
+    bc = T[100, 0, 0, 0, 0]
+    tau = T[1230, 3060, 4920, 7800, 10680, 15030, 22620, 36420]
     tf = tau[nm]
     h = tf / T(nh)
-    t = Float64[T(i-1)*h for i in 1:nh+1]
+    t = T[T(i-1)*h for i in 1:nh+1]
     itau = Int[min(nh, Int(floor(tau[i]/h))+1) for i in 1:nm]
 
-    z = reshape(Float64[
+    z = reshape(T[
         88.35,  7.3,  2.3,  0.4,  1.75,
         76.4,  15.6,  4.5,  0.7,  2.8,
         65.1,  23.1,  5.3,  1.1,  5.8,
@@ -385,7 +381,7 @@ function polygon_recipe end
 function polygon_args end
 # Derived tables, reached from the recipe through a deferred call so the
 # recipe keeps a single placeholder -- which is all `P_new` carries.
-function polygon_data(N; T = Float64)
+function polygon_data(N)
     θ0 = [i * π / (N - 1) - π / (N - 1) for i in 1:N]
     pairs = Tuple{Int,Int}[(i, j) for i in 1:N-1 for j in i+1:N]
     return (; θ0, pairs)
@@ -395,7 +391,7 @@ function robot_recipe end
 function robot_args end
 # Derived tables, reached from the recipe through a deferred call so the
 # recipe keeps a single placeholder -- which is all `P_new` carries.
-function robot_data(nh; T = Float64)
+function robot_data(::Val{T}, nh) where {T}
     pi_T = T(pi)
     inv_nh = T(1) / T(nh)
     two_pi_3 = T(2) * pi_T / T(3)
@@ -409,12 +405,12 @@ function rocket_recipe end
 function rocket_args end
 # Derived tables live here, not in `_args`: a recipe that reaches them through
 # a deferred call keeps a single placeholder, which is all `P_new` carries.
-function rocket_data(nh; T = Float64)
+function rocket_data(::Val{T}, nh) where {T}
     m_0 = T(1)
     m_f = T(0.6) * m_0
     inv_nh = T(1) / T(nh)
-    v_start = Float64[T(i)*inv_nh*(T(1) - T(i)*inv_nh) for i=0:nh]
-    m_start = Float64[(m_f - m_0)*(T(i)*inv_nh) + m_0 for i=0:nh]
+    v_start = T[T(i)*inv_nh*(T(1) - T(i)*inv_nh) for i=0:nh]
+    m_start = T[(m_f - m_0)*(T(i)*inv_nh) + m_0 for i=0:nh]
     return (; v_start, m_start)
 end
 function steering_model end
@@ -423,10 +419,10 @@ function steering_args end
 # Derived tables, reached through a deferred call so the recipe keeps a single
 # placeholder.  Concrete element type: inside a compiled library the keyword `T`
 # is a runtime value and `T[...]` will not trim.
-function steering_data(nh)
-    inv_nh = 1.0 / nh
-    gen_x0(k, i) = i == 2 ? 5.0*k*inv_nh : (i == 3 ? 45.0*k*inv_nh : 0.0)
-    x_start = Float64[gen_x0(i, j) for i = 1:nh+1, j = 1:4]
+function steering_data(::Val{T}, nh) where {T}
+    inv_nh = T(1) / T(nh)
+    gen_x0(k, i) = i == 2 ? T(5)*T(k)*inv_nh : (i == 3 ? T(45)*T(k)*inv_nh : T(0))
+    x_start = T[gen_x0(i, j) for i = 1:nh+1, j = 1:4]
     return (; x_start)
 end
 function tetra_duct12_model end
@@ -440,10 +436,10 @@ function torsion_recipe end
 function torsion_args end
 # Two sizes, so a two-argument deferred call; the recipe then carries only the
 # two integers, which is what a builder ABI can accept.
-function torsion_data(nx, ny)
+function torsion_data(::Val{T}, nx, ny) where {T}
     hx = Float64(1.0 / (nx + 1.0))
     hy = Float64(1.0 / (ny + 1.0))
-    D = Float64[min(min(i, nx-i+1)*hx, min(j, ny-j+1)*hy) for i in 0:nx+1, j in 0:ny+1]
+    D = T[min(min(i, nx-i+1)*hx, min(j, ny-j+1)*hy) for i in 0:nx+1, j in 0:ny+1]
     D_flat = [(k1, k2, D[k1, k2]) for k1 in 1:nx+2, k2 in 1:ny+2]
     lcon = [-d for (_, _, d) in D_flat]
     ucon = [d for (_, _, d) in D_flat]

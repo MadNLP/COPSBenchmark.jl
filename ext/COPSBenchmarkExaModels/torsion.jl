@@ -12,7 +12,7 @@
     c_val = T(5.0)
 
     core, nx, ny = ExaModels.ExaCore(T; backend = backend, nargs = Val(2))
-    d = ExaModels.ArgNode2(COPSBenchmark.torsion_data, nx, ny)
+    d = ExaModels.ArgCall(COPSBenchmark.torsion_data, (Val(T), nx, ny))
 
     hx = one(T) / (nx + 1)
     hy = one(T) / (ny + 1)
@@ -36,11 +36,11 @@
     return core
 end
 
-@inline COPSBenchmark.torsion_args(::ExaModelsBackend, nx, ny; T = Float64) = (nx, ny)
+@inline COPSBenchmark.torsion_args(::ExaModelsBackend, nx, ny) = (nx, ny)
 
 @inline COPSBenchmark.torsion_model(b::ExaModelsBackend, nx, ny; T = Float64, backend = nothing, kwargs...) =
     ExaModels.ExaModel(
         COPSBenchmark.torsion_recipe(b; T = T, backend = backend),
-        COPSBenchmark.torsion_args(b, nx, ny; T = T)...;
+        COPSBenchmark.torsion_args(b, nx, ny)...;
         kwargs...,
     )

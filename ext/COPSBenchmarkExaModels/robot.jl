@@ -27,7 +27,7 @@
     zero_T = T(0)
 
     core, nh = ExaModels.ExaCore(T; backend = backend, nargs = Val(1))
-    d = ExaModels.ArgNode1(COPSBenchmark.robot_data, nh)
+    d = ExaModels.ArgCall(COPSBenchmark.robot_data, (Val(T), nh))
 
     inv_nh = one(T) / nh
 
@@ -76,11 +76,11 @@
     return core
 end
 
-@inline COPSBenchmark.robot_args(::ExaModelsBackend, nh; T = Float64) = (nh,)
+@inline COPSBenchmark.robot_args(::ExaModelsBackend, nh) = (nh,)
 
 @inline COPSBenchmark.robot_model(b::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...) =
     ExaModels.ExaModel(
         COPSBenchmark.robot_recipe(b; T = T, backend = backend),
-        COPSBenchmark.robot_args(b, nh; T = T)...;
+        COPSBenchmark.robot_args(b, nh)...;
         kwargs...,
     )

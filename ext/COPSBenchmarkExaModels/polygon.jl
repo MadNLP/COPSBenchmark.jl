@@ -35,11 +35,11 @@
     return c
 end
 
-@inline COPSBenchmark.polygon_args(::ExaModelsBackend, n::Int; T = Float64) = (div(n, 2),)
+@inline COPSBenchmark.polygon_args(::ExaModelsBackend, n::Int) = (div(n, 2),)
 
 @inline COPSBenchmark.polygon_model(b::ExaModelsBackend, n::Int; T = Float64, backend = nothing, kwargs...) =
     ExaModels.ExaModel(
         COPSBenchmark.polygon_recipe(b; T = T, backend = backend),
-        COPSBenchmark.polygon_args(b, n; T = T)...;
+        COPSBenchmark.polygon_args(b, n)...;
         kwargs...,
     )
