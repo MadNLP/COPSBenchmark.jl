@@ -5,7 +5,9 @@
 # COPS 3.0 - November 2002
 # COPS 3.1 - March 2004
 
-@inline function COPSBenchmark.glider_model(::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...)
+@inline function COPSBenchmark.glider_recipe(
+    ::ExaModelsBackend; T = Float64, backend = nothing,
+)
     # Design parameters (T-typed)
     x_0 = T(0)
     y_0 = T(1000)
@@ -26,45 +28,64 @@
     cL_max = T(1.4)
     cL0 = cL_max / T(2)
     half = T(0.5)
-    inv_nh = T(1) / T(nh)
     r_offset = T(2.5)
     one_T = T(1)
 
-    c = ExaModels.ExaCore(T; backend = backend, concrete = Val(true))
+    c, nh, d = ExaModels.ExaCore(T; backend = backend, nargs = Val(2))
+
+    inv_nh = one(T) / nh
 
     ExaModels.@add_var(c, t_f, 1; lvar = T(0), start = T(1))
-    ExaModels.@add_var(c, x, nh+1; lvar = zeros(T, nh+1), start = [x_0 + vx_0*(T(k)*inv_nh) for k in 0:nh])
-    ExaModels.@add_var(c, y, nh+1; start = [y_0 + (T(k)*inv_nh)*(y_f - y_0) for k in 0:nh])
-    ExaModels.@add_var(c, vx, nh+1; lvar = zeros(T, nh+1), start = fill(vx_0, nh+1))
-    ExaModels.@add_var(c, vy, nh+1; start = fill(vy_0, nh+1))
-    ExaModels.@add_var(c, cL, nh+1; lvar = fill(cL_min,nh+1), uvar = fill(cL_max, nh+1), start = fill(cL0, nh+1))
+    ExaModels.@add_var(c, x, nh+1; lvar = T(0), start = d.x_start)
+    ExaModels.@add_var(c, y, nh+1; start = d.y_start)
+    ExaModels.@add_var(c, vx, nh+1; lvar = T(0), start = vx_0)
+    ExaModels.@add_var(c, vy, nh+1; start = vy_0)
+    ExaModels.@add_var(c, cL, nh+1; lvar = cL_min, uvar = cL_max, start = cL0)
 
-    # Expressions (matching JuMP @expressions)
-    ExaModels.@add_expr(c, r, (x[i]/r_0 - r_offset)^2 for i in 1:nh+1)
-    ExaModels.@add_expr(c, u, u_c*(one_T - r[i])*exp(-r[i]) for i in 1:nh+1)
-    ExaModels.@add_expr(c, w, vy[i] - u[i] for i in 1:nh+1)
-    ExaModels.@add_expr(c, v, sqrt(vx[i]^2 + w[i]^2) for i in 1:nh+1)
-    ExaModels.@add_expr(c, D, half*(cd0+cd1*cL[i]^2)*rho*S*v[i]^2 for i in 1:nh+1)
-    ExaModels.@add_expr(c, L, half*cL[i]*rho*S*v[i]^2 for i in 1:nh+1)
-    ExaModels.@add_expr(c, vx_dot, (-L[i]*(w[i]/v[i]) - D[i]*(vx[i]/v[i]))/m for i in 1:nh+1)
-    ExaModels.@add_expr(c, vy_dot, (L[i]*(vx[i]/v[i]) - D[i]*(w[i]/v[i]))/m - g for i in 1:nh+1)
+    # These were `@add_expr`s.  That macro stores its body as a closure, which a
+    # recipe cannot instantiate; a local helper is spliced at each point of use
+    # exactly as the subexpression was, so the trees are unchanged.  They chain,
+    # as the originals did -- u is written in terms of r, v in terms of w.
+    r(i) = (x[i]/r_0 - r_offset)^2
+    u(i) = u_c*(one_T - r(i))*exp(-r(i))
+    w(i) = vy[i] - u(i)
+    v(i) = sqrt(vx[i]^2 + w(i)^2)
+    D(i) = half*(cd0+cd1*cL[i]^2)*rho*S*v(i)^2
+    L(i) = half*cL[i]*rho*S*v(i)^2
+    vx_dot(i) = (-L(i)*(w(i)/v(i)) - D(i)*(vx[i]/v(i)))/m
+    vy_dot(i) = (L(i)*(vx[i]/v(i)) - D(i)*(w(i)/v(i)))/m - g
 
-    ExaModels.@add_obj(c, -x[nh+1])
+    ExaModels.@add_obj(c, -x[k] for k in (nh+1):(nh+1))
 
     # Dynamics
     ExaModels.@add_con(c, c1, x[j] - (x[j-1] + half * t_f[1]*inv_nh * (vx[j] + vx[j-1])) for j in 2:nh+1)
     ExaModels.@add_con(c, c2, y[j] - (y[j-1] + half * t_f[1]*inv_nh * (vy[j] + vy[j-1])) for j in 2:nh+1)
-    ExaModels.@add_con(c, c3, vx[j] - (vx[j-1] + half * t_f[1]*inv_nh * (vx_dot[j] + vx_dot[j-1])) for j in 2:nh+1)
-    ExaModels.@add_con(c, c4, vy[j] - (vy[j-1] + half * t_f[1]*inv_nh * (vy_dot[j] + vy_dot[j-1])) for j in 2:nh+1)
+    ExaModels.@add_con(c, c3, vx[j] - (vx[j-1] + half * t_f[1]*inv_nh * (vx_dot(j) + vx_dot(j-1))) for j in 2:nh+1)
+    ExaModels.@add_con(c, c4, vy[j] - (vy[j-1] + half * t_f[1]*inv_nh * (vy_dot(j) + vy_dot(j-1))) for j in 2:nh+1)
 
     # Boundary constraints
     ExaModels.@add_con(c, c5, x[1] - x_0)
     ExaModels.@add_con(c, c6, y[1] - y_0)
-    ExaModels.@add_con(c, c7, y[nh+1] - y_f)
+    ExaModels.@add_con(c, c7, y[k] - y_f for k in (nh+1):(nh+1))
     ExaModels.@add_con(c, c8, vx[1] - vx_0)
-    ExaModels.@add_con(c, c9, vx[nh+1] - vx_f)
+    ExaModels.@add_con(c, c9, vx[k] - vx_f for k in (nh+1):(nh+1))
     ExaModels.@add_con(c, c10, vy[1] - vy_0)
-    ExaModels.@add_con(c, c11, vy[nh+1] - vy_f)
+    ExaModels.@add_con(c, c11, vy[k] - vy_f for k in (nh+1):(nh+1))
 
-    ExaModels.ExaModel(c; kwargs...)
+    return c
 end
+
+@inline function COPSBenchmark.glider_args(::ExaModelsBackend, nh; T = Float64)
+    x_0 = T(0); y_0 = T(1000); y_f = T(900); vx_0 = T(13.23)
+    inv_nh = T(1) / T(nh)
+    x_start = [x_0 + vx_0*(T(k)*inv_nh) for k in 0:nh]
+    y_start = [y_0 + (T(k)*inv_nh)*(y_f - y_0) for k in 0:nh]
+    return (nh, (; x_start, y_start))
+end
+
+@inline COPSBenchmark.glider_model(b::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...) =
+    ExaModels.ExaModel(
+        COPSBenchmark.glider_recipe(b; T = T, backend = backend),
+        COPSBenchmark.glider_args(b, nh; T = T)...;
+        kwargs...,
+    )

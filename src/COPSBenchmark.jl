@@ -8,6 +8,8 @@ struct ExaModelsBackend <: AbstractModelerBackend end
 
 # COPS Instances
 function bearing_model end
+function bearing_recipe end
+function bearing_args end
 function camshape_model end
 function camshape_recipe end
 function camshape_args end
@@ -23,10 +25,14 @@ function channel_args end
 function clnlbeam_model end
 function dirichlet_model end
 function elec_model end
+function elec_recipe end
+function elec_args end
 function gasoil_model end
 function gasoil_recipe end
 function gasoil_args end
 function glider_model end
+function glider_recipe end
+function glider_args end
 function henon_model end
 function lane_emden_model end
 function marine_model end
@@ -36,11 +42,17 @@ function methanol_model end
 function methanol_recipe end
 function methanol_args end
 function minsurf_model end
+function minsurf_recipe end
+function minsurf_args end
 function pinene_model end
 function pinene_recipe end
 function pinene_args end
 function polygon_model end
+function polygon_recipe end
+function polygon_args end
 function robot_model end
+function robot_recipe end
+function robot_args end
 function rocket_model end
 function rocket_recipe end
 function rocket_args end
@@ -54,6 +66,8 @@ function tetra_foam5_model end
 function tetra_gear_model end
 function tetra_hook_model end
 function torsion_model end
+function torsion_recipe end
+function torsion_args end
 function triangle_deer_model end
 function triangle_pacman_model end
 function triangle_turtle_model end
