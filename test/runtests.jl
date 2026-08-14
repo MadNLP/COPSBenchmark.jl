@@ -288,7 +288,13 @@ end
 # is at a size the library was not compiled for, since a model that only answers
 # at its compile-time size is not a recipe.
 @testset "compile_all" begin
-    r = ExaModelsCompiler.compile_all(COPSBenchmark)
+    # The default `path = "@cops"` installs onto the CNLPModels search path, which
+    # only exists if CNLPMODELS_PATH is set.  Point it at a temporary directory so
+    # the call stays the plain default one without writing into the user's depot.
+    dir = mktempdir()
+    r = withenv("CNLPMODELS_PATH" => dir) do
+        ExaModelsCompiler.compile_all(COPSBenchmark)
+    end
     @test isfile(r.libpath)
     lib = CNLPModels.load(r.libpath)
 
