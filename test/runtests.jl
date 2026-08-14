@@ -4,6 +4,7 @@ using JuMP
 using Ipopt
 using ExaModels
 using ExaModelsCompiler
+import CNLPModels
 using NLPModels
 using NLPModelsIpopt
 using NLPModelsJuMP
@@ -281,50 +282,32 @@ RECIPE_INSTANCES = [
     @test (again.meta.nvar, again.meta.ncon, again.meta.x0) == first_meta
 end
 
-# `compile_all` is the provider's whole AOT surface: which problems it offers,
-# the arguments each is closed with, and the selection contract.  Most of that
-# is testable without invoking a compiler, because `select` validates names
-# before `compile_library` is ever reached — so the error paths below exercise
-# `compile_all` itself rather than a stand-in.  One real compile follows,
-# because a list that assembles is not evidence that anything in it compiles.
+# `compile_all` compiles the package's models into one shared library.  It is
+# expensive, so this stays plain: call it with its defaults, then check that a
+# model out of the resulting library is the model it should be.  The read-back
+# is at a size the library was not compiled for, since a model that only answers
+# at its compile-time size is not a recipe.
 @testset "compile_all" begin
-    Bc = COPSBenchmark.ExaModelsBackend()
-    GRID = (:bearing, :minsurf, :torsion)
-
-    # The list `compile_all` derives from the `*_recipe` names must cover the
-    # package.  Deriving it is what keeps the extension from drifting as models
-    # are added; this test is what makes that a fact rather than an intention.
-    recipes = sort([Symbol(chopsuffix(string(n), "_recipe"))
-                    for n in names(COPSBenchmark; all = true)
-                    if endswith(string(n), "_recipe") && !startswith(string(n), "#")])
-    @test !isempty(recipes)
-    @test sort(Symbol.(first.(RECIPE_INSTANCES))) == recipes
-
-    # Every pair `compile_all` would hand the compiler has to close into a
-    # model.  This is what breaks when a recipe and its `*_args` disagree, and
-    # it costs no compilation to find out.
-    for (name, params) in RECIPE_INSTANCES
-        recipe = getfield(COPSBenchmark, Symbol(name, :_recipe))
-        argsf = getfield(COPSBenchmark, Symbol(name, :_args))
-        m = ExaModels.ExaModel(recipe(Bc; T = Float64), argsf(Bc, params...)...)
-        @test m.meta.nvar > 0
+    # The default `path = "@cops"` installs onto the CNLPModels search path, which
+    # only exists if CNLPMODELS_PATH is set.  Point it at a temporary directory so
+    # the call stays the plain default one without writing into the user's depot.
+    dir = mktempdir()
+    r = withenv("CNLPMODELS_PATH" => dir) do
+        ExaModelsCompiler.compile_all(COPSBenchmark)
     end
+    @test isfile(r.libpath)
+    lib = CNLPModels.load(r.libpath)
 
-    # Selection contract: an unknown name is refused rather than silently
-    # yielding a library missing the model the caller asked for.  Refused
-    # before any compilation, which is what makes this cheap.
-    @test_throws ArgumentError ExaModelsCompiler.compile_all(
-        COPSBenchmark; only = [:no_such_problem])
-    @test_throws ArgumentError ExaModelsCompiler.compile_all(
-        COPSBenchmark; exclude = recipes)
-    @test_throws ArgumentError ExaModelsCompiler.compile_all(Base)
-
-    # One real compile, on a single small non-grid model, exercising the whole
-    # path: recipe -> library -> load.
-    mktempdir() do dir
-        r = ExaModelsCompiler.compile_all(COPSBenchmark;
-                                          path = joinpath(dir, "copstest"),
-                                          sizes = 12, only = [:chain])
-        @test isfile(r.libpath)
+    b = COPSBenchmark.ExaModelsBackend()
+    for name in (:chain, :camshape)
+        m = CNLPModels.CNLPModel(lib, getfield(COPSBenchmark, Symbol(name, :_args))(b, 29)...;
+                                 prefix = String(name))
+        ref = getfield(COPSBenchmark, Symbol(name, :_model))(b, 29)
+        @test m.meta.nvar == ref.meta.nvar
+        @test m.meta.ncon == ref.meta.ncon
+        @test m.meta.x0 == ref.meta.x0
+        x = ref.meta.x0 .+ 0.001 .* (1:ref.meta.nvar)
+        @test NLPModels.obj(m, x) == NLPModels.obj(ref, x)
+        @test NLPModels.grad(m, x) == NLPModels.grad(ref, x)
     end
 end

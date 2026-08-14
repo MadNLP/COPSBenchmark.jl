@@ -1,7 +1,7 @@
 name = "COPSBenchmark"
 uuid = "3c263af4-7bba-497b-afe4-00c59a0a48a5"
-version = "0.2.0"
-authors = ["MadSuite <https://madsuite.org/>"]
+version = "0.3.0"
+authors = ["pacaud", "sshin23", "and contributors"]
 
 [deps]
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
@@ -17,5 +17,10 @@ COPSBenchmarkExaModelsCompiler = "ExaModelsCompiler"
 COPSBenchmarkJuMP = "JuMP"
 
 [compat]
+# ExaModels and ExaModelsCompiler are deliberately absent -- see the note in
+# LuksanVlcekBenchmark: the recipe API is in no registered ExaModels version and
+# ExaModelsCompiler is unregistered, so any bound would name a version that does
+# not exist.
 JuMP = "^1.19"
+Random = "1"
 julia = "1.11"
