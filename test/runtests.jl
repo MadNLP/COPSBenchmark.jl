@@ -3,6 +3,7 @@ using Test
 using JuMP
 using Ipopt
 using ExaModels
+using ExaModelsCompiler
 using NLPModels
 using NLPModelsIpopt
 using NLPModelsJuMP
@@ -232,5 +233,98 @@ end
         He_v = hess_coord(exa_model, x0e, y0)
         H_exa = Matrix(Symmetric(sparse(He_r, He_c, He_v, n, n), :L))
         @test sort(abs.(eigvals(H_jump))) ≈ sort(abs.(eigvals(H_exa))) atol = 1e-6
+    end
+end
+
+# ── Recipes ───────────────────────────────────────────────────────────────────
+# A recipe is the model's structure with its sizes left open; `*_args` supplies
+# the values that close it, and `*_model` is the two composed.  Two properties
+# `*_model` cannot show are checked here: the core really is open (it declares
+# its arity and its variable count is an expression), and it is not consumed by
+# being used — one core instantiates at two sizes and again at the first, each
+# time matching what `*_model` builds at that size.
+RECIPE_INSTANCES = [
+    (name, params) for (name, params) in [
+        ("bearing", (8, 8)), ("camshape", (60,)), ("catmix", (8,)),
+        ("chain", (60,)), ("channel", (12,)), ("elec", (15,)),
+        ("gasoil", (8,)), ("glider", (8,)), ("marine", (8,)),
+        ("methanol", (8,)), ("minsurf", (8, 8)), ("pinene", (8,)),
+        ("polygon", (30,)), ("robot", (12,)), ("rocket", (12,)),
+        ("steering", (12,)), ("torsion", (8, 8)),
+    ]
+]
+
+@testset "Recipe: $name" for (name, params) in RECIPE_INSTANCES
+    B = COPSBenchmark.ExaModelsBackend()
+    recipe = getfield(COPSBenchmark, Symbol(name, "_recipe"))
+    argsf  = getfield(COPSBenchmark, Symbol(name, "_args"))
+    modelf = getfield(COPSBenchmark, Symbol(name, "_model"))
+
+    core = recipe(B)
+    @test core.nargs === Val(length(argsf(B, params...)))
+    @test core.nvar isa ExaModels.AbstractArgNode
+
+    bigger = map(p -> p + 4, params)
+    first_meta = nothing
+    for ps in (params, bigger)
+        m = ExaModels.ExaModel(core, argsf(B, ps...)...)
+        r = modelf(B, ps...)
+        @test m.meta.nvar == r.meta.nvar
+        @test m.meta.ncon == r.meta.ncon
+        @test m.meta.x0 == r.meta.x0
+        x = r.meta.x0 .+ 0.001 .* (1:r.meta.nvar)
+        @test NLPModels.obj(m, x) == NLPModels.obj(r, x)
+        @test NLPModels.grad(m, x) == NLPModels.grad(r, x)
+        ps == params && (first_meta = (m.meta.nvar, m.meta.ncon, copy(m.meta.x0)))
+    end
+    again = ExaModels.ExaModel(core, argsf(B, params...)...)
+    @test (again.meta.nvar, again.meta.ncon, again.meta.x0) == first_meta
+end
+
+# `compile_all` is the provider's whole AOT surface: which problems it offers,
+# the arguments each is closed with, and the selection contract.  Most of that
+# is testable without invoking a compiler, because `select` validates names
+# before `compile_library` is ever reached — so the error paths below exercise
+# `compile_all` itself rather than a stand-in.  One real compile follows,
+# because a list that assembles is not evidence that anything in it compiles.
+@testset "compile_all" begin
+    Bc = COPSBenchmark.ExaModelsBackend()
+    GRID = (:bearing, :minsurf, :torsion)
+
+    # The list `compile_all` derives from the `*_recipe` names must cover the
+    # package.  Deriving it is what keeps the extension from drifting as models
+    # are added; this test is what makes that a fact rather than an intention.
+    recipes = sort([Symbol(chopsuffix(string(n), "_recipe"))
+                    for n in names(COPSBenchmark; all = true)
+                    if endswith(string(n), "_recipe") && !startswith(string(n), "#")])
+    @test !isempty(recipes)
+    @test sort(Symbol.(first.(RECIPE_INSTANCES))) == recipes
+
+    # Every pair `compile_all` would hand the compiler has to close into a
+    # model.  This is what breaks when a recipe and its `*_args` disagree, and
+    # it costs no compilation to find out.
+    for (name, params) in RECIPE_INSTANCES
+        recipe = getfield(COPSBenchmark, Symbol(name, :_recipe))
+        argsf = getfield(COPSBenchmark, Symbol(name, :_args))
+        m = ExaModels.ExaModel(recipe(Bc; T = Float64), argsf(Bc, params...)...)
+        @test m.meta.nvar > 0
+    end
+
+    # Selection contract: an unknown name is refused rather than silently
+    # yielding a library missing the model the caller asked for.  Refused
+    # before any compilation, which is what makes this cheap.
+    @test_throws ArgumentError ExaModelsCompiler.compile_all(
+        COPSBenchmark; only = [:no_such_problem])
+    @test_throws ArgumentError ExaModelsCompiler.compile_all(
+        COPSBenchmark; exclude = recipes)
+    @test_throws ArgumentError ExaModelsCompiler.compile_all(Base)
+
+    # One real compile, on a single small non-grid model, exercising the whole
+    # path: recipe -> library -> load.
+    mktempdir() do dir
+        r = ExaModelsCompiler.compile_all(COPSBenchmark;
+                                          path = joinpath(dir, "copstest"),
+                                          sizes = 12, only = [:chain])
+        @test isfile(r.libpath)
     end
 end

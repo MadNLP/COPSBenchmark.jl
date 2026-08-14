@@ -5,7 +5,9 @@
 # COPS 3.0 - November 2002
 # COPS 3.1 - March 2004
 
-@inline function COPSBenchmark.robot_model(::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...)
+@inline function COPSBenchmark.robot_recipe(
+    ::ExaModelsBackend; T = Float64, backend = nothing,
+)
 
     # total length of arm
     L = T(5)
@@ -20,19 +22,21 @@
     phi0 = pi_T / T(4)
     half = T(0.5)
     third = T(1) / T(3)
-    inv_nh = T(1) / T(nh)
     two_pi_3 = T(2) * pi_T / T(3)
     four_pi_3 = T(4) * pi_T / T(3)
     zero_T = T(0)
 
-    core = ExaModels.ExaCore(T; backend= backend, concrete = Val(true))
+    core, nh = ExaModels.ExaCore(T; backend = backend, nargs = Val(1))
+    d = ExaModels.ArgCall(COPSBenchmark.robot_data, (Val(T), nh))
+
+    inv_nh = one(T) / nh
 
     ExaModels.@add_var(core, rho, nh+1; start=rho0, lvar = zero_T, uvar = L)
-    ExaModels.@add_var(core, the, nh+1; start=[two_pi_3*(T(k)*inv_nh)^2 for k=1:nh+1], lvar = -pi_T, uvar = pi_T)
+    ExaModels.@add_var(core, the, nh+1; start=d.the_start, lvar = -pi_T, uvar = pi_T)
     ExaModels.@add_var(core, phi, nh+1; start=phi0, lvar = zero_T, uvar = pi_T)
     # Derivatives
     ExaModels.@add_var(core, rho_dot, nh+1; start=zero_T)
-    ExaModels.@add_var(core, the_dot, nh+1; start=[four_pi_3*(T(k)*inv_nh) for k=1:nh+1])
+    ExaModels.@add_var(core, the_dot, nh+1; start=d.the_dot_start)
     ExaModels.@add_var(core, phi_dot, nh+1; start=zero_T)
     # Control
     ExaModels.@add_var(core, u_rho, nh+1; start=zero_T, lvar = -max_u_rho, uvar = max_u_rho)
@@ -59,15 +63,24 @@
     ExaModels.@add_con(core, c7, - rho[1] + rho0)
     ExaModels.@add_con(core, c8, - the[1] + zero_T)
     ExaModels.@add_con(core, c9, - phi[1] + phi0)
-    ExaModels.@add_con(core, c10, - rho[nh+1] + rho0)
-    ExaModels.@add_con(core, c11, - the[nh+1] + two_pi_3)
-    ExaModels.@add_con(core, c12, - phi[nh+1] + phi0)
+    ExaModels.@add_con(core, c10, - rho[k] + rho0 for k in (nh+1):(nh+1))
+    ExaModels.@add_con(core, c11, - the[k] + two_pi_3 for k in (nh+1):(nh+1))
+    ExaModels.@add_con(core, c12, - phi[k] + phi0 for k in (nh+1):(nh+1))
     ExaModels.@add_con(core, c13, - rho_dot[1] + zero_T)
     ExaModels.@add_con(core, c14, - the_dot[1] + zero_T)
     ExaModels.@add_con(core, c15, - phi_dot[1] + zero_T)
-    ExaModels.@add_con(core, c16, - rho_dot[nh+1] + zero_T)
-    ExaModels.@add_con(core, c17, - the_dot[nh+1] + zero_T)
-    ExaModels.@add_con(core, c18, - phi_dot[nh+1] + zero_T)
+    ExaModels.@add_con(core, c16, - rho_dot[k] + zero_T for k in (nh+1):(nh+1))
+    ExaModels.@add_con(core, c17, - the_dot[k] + zero_T for k in (nh+1):(nh+1))
+    ExaModels.@add_con(core, c18, - phi_dot[k] + zero_T for k in (nh+1):(nh+1))
 
-    return ExaModels.ExaModel(core; kwargs...)
+    return core
 end
+
+@inline COPSBenchmark.robot_args(::ExaModelsBackend, nh) = (nh,)
+
+@inline COPSBenchmark.robot_model(b::ExaModelsBackend, nh; T = Float64, backend = nothing, kwargs...) =
+    ExaModels.ExaModel(
+        COPSBenchmark.robot_recipe(b; T = T, backend = backend),
+        COPSBenchmark.robot_args(b, nh)...;
+        kwargs...,
+    )

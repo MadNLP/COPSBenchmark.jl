@@ -8,24 +8,29 @@
 #   see "Benchmarking Optimization Software with COPS"
 #   Argonne National Labs Technical Report ANL/MCS-246 (2004)
 
-@inline function COPSBenchmark.chain_model(::ExaModelsBackend, n; T = Float64, backend = nothing, kwargs...)
-    nh = max(2, div(n - 4, 4))
-
+# The public size `n` is not the discretization: `nh = max(2, div(n-4, 4))` is.
+# `chain_args` does that reduction and builds the four starting curves, which
+# are comprehensions over nh; the recipe is written against nh directly.
+@inline function COPSBenchmark.chain_recipe(
+    ::ExaModelsBackend; T = Float64, backend = nothing,
+)
     L = 4
     a = 1
     b = 3
-    tmin = b > a ? 1 / 4 : 3 / 4
     tf = 1.0
+
+    c, nh = ExaModels.ExaCore(T; backend = backend, nargs = Val(1))
+    d = ExaModels.ArgNode1(COPSBenchmark.chain_data, nh)
+
     h = tf / nh
 
-    c = ExaModels.ExaCore(T; backend = backend, concrete = Val(true))
-    ExaModels.@add_var(c, u, nh + 1; start = [4 * abs(b - a) * (k / nh - tmin) for k in 1:nh+1])
-    ExaModels.@add_var(c, x1, nh + 1; start = [4 * abs(b - a) * k / nh * (1 / 2 * k / nh - tmin) + a for k in 1:nh+1])
-    ExaModels.@add_var(c, x2, nh + 1; start = [(4 * abs(b - a) * k / nh * (1 / 2 * k / nh - tmin) + a) *
-        (4 * abs(b - a) * (k / nh - tmin)) for k in 1:nh+1])
-    ExaModels.@add_var(c, x3, nh + 1;  start = [4 * abs(b - a) * (k / nh - tmin) for k in 1:nh+1])
+    ExaModels.@add_var(c, u, nh + 1; start = d.u0)
+    ExaModels.@add_var(c, x1, nh + 1; start = d.x10)
+    ExaModels.@add_var(c, x2, nh + 1; start = d.x20)
+    ExaModels.@add_var(c, x3, nh + 1; start = d.x30)
 
-    ExaModels.@add_obj(c, x2[nh + 1])
+    # Indexes the last point, so the index arrives as data.
+    ExaModels.@add_obj(c, x2[k] for k in (nh+1):(nh+1))
 
     ExaModels.@add_con(
         c,
@@ -42,7 +47,7 @@
     ExaModels.@add_con(
         c,
         c3,
-        x1[nh + 1] - b
+        x1[k] - b for k in (nh+1):(nh+1)
     )
 
     ExaModels.@add_con(
@@ -60,7 +65,7 @@
     ExaModels.@add_con(
         c,
         c6,
-        x3[nh+1] - L
+        x3[k] - L for k in (nh+1):(nh+1)
     )
 
     ExaModels.@add_con(
@@ -75,6 +80,14 @@
         x3[j + 1] - x3[j] - 1 / 2 * h * (sqrt(1 + u[j]^2) + sqrt(1 + u[j + 1]^2)) for j in 1:nh
     )
 
-    return ExaModels.ExaModel(c; kwargs...)
+    return c
 end
 
+@inline COPSBenchmark.chain_args(::ExaModelsBackend, n) = (max(2, div(n - 4, 4)),)
+
+@inline COPSBenchmark.chain_model(b::ExaModelsBackend, n; T = Float64, backend = nothing, kwargs...) =
+    ExaModels.ExaModel(
+        COPSBenchmark.chain_recipe(b; T = T, backend = backend),
+        COPSBenchmark.chain_args(b, n)...;
+        kwargs...,
+    )
