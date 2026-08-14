@@ -11,10 +11,19 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [sources]
-# The recipe API (`nargs`, deferred argument nodes) is on ExaModels main and in
-# no tagged release yet; without this pin CI resolves the registry's v0.11.x
-# and every ExaModels-backend test fails on the `nargs` keyword.  This pin
-# tracks the #308 branch because robot/glider recipes need `@add_expr`-as-node,
-# which is there and not yet on main — REPOINT to main when #308 merges, and
-# drop the pin once a release carries the API.
-ExaModels = {rev = "abi/multi-model-producer", url = "https://github.com/madsuite-org/ExaModels.jl"}
+# The recipe API (`nargs`, deferred argument nodes, compile_all) is on ExaModels
+# main and in no tagged release yet; without this pin CI resolves the registry's
+# v0.11.x and every ExaModels-backend test fails on the `nargs` keyword.
+#
+# Pinned to a SHA rather than `rev = "main"` deliberately.  A branch name is not
+# reproducible under julia-actions/cache: the job restores ~/.julia from an
+# earlier run and reuses that clone without re-fetching, so `main` resolves to
+# whatever commit the cache happens to hold.  That is how run 31789266458 built
+# against a main from before `nargs` existed -- while reporting the pin as
+# honoured, since the source URL and rev in the resolved status were both right.
+# A SHA either is in the cached clone, in which case it is the code we asked
+# for, or it is not and Pkg must fetch it.
+#
+# BUMP when a needed change lands on ExaModels main; DROP for a version bound at
+# the first release carrying the API.
+ExaModels = {rev = "a9fbf9ccb5afcfb973bc09ed10d7e6b5f24e07a3", url = "https://github.com/madsuite-org/ExaModels.jl"}
