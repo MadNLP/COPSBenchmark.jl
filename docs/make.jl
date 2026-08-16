@@ -12,7 +12,7 @@ makedocs(
 )
 
 deploydocs(
-    repo = "github.com/MadNLP/COPSBenchmark.jl.git",
+    repo = "github.com/madsuite-org/COPSBenchmark.jl.git",
     devbranch = "main",
     push_preview = true,
 )
