@@ -34,3 +34,6 @@ jobs:
         with:
           file: lcov.info
           token: ${{ secrets.CODECOV_TOKEN }}
+          # The org-wide token cannot imply a repository; the slug says
+          # which repo this upload is for.
+          slug: ${{ github.repository }}
